@@ -72,7 +72,7 @@ return 0 if c lays on v0-v1 line
 return <0 if c lays on the left side of v0-v1 line
 */
 float Mesh::edgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 c) {
-	return (v1.y - v0.y)*(c.x - v0.x) - (v1.x - v0.x)*(c.y - v0.y);
+	return (v1.x - v0.x)*(c.y - v0.y) - (v1.y - v0.y)*(c.x - v0.x);
 }
 
 float Mesh::stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y) {
@@ -86,9 +86,9 @@ bool Mesh::isPixelInTriangle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2
 	glm::fvec3 N = calcTriangleNormalSmooth(_triangle);
 #endif
 	//expecting counter clockwise triangle indices
-	if (edgeFunction(v0, v1, pixel) > 0) return false;
-	if (edgeFunction(v1, v2, pixel) > 0) return false;
-	if (edgeFunction(v2, v0, pixel) > 0) return false;
+	if (edgeFunction(v0, v1, pixel) < 0) return false;
+	if (edgeFunction(v1, v2, pixel) < 0) return false;
+	if (edgeFunction(v2, v0, pixel) < 0) return false;
 	return true;
 }
 /*
