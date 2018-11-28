@@ -4,6 +4,7 @@
 
 class Mesh
 {
+	const float inf = std::numeric_limits<float>::max();
 public:
 	Mesh();
 
@@ -25,8 +26,10 @@ public:
 		std::string type;
 		std::string path;
 	};
-
+	float albedo;
 	Material material;
+
+	glm::vec2 boundary_points[2] = { glm::vec2(inf), glm::vec2(-inf) };
 
 	bool isSingleSided() { return singleSided; };
 	int getTriangleCount() { return indices_len / 3; }
@@ -44,9 +47,15 @@ public:
 		return glm::normalize(glm::cross(vertices[1] - vertices[0], vertices[2] - vertices[0]));
 	}
 
-	Mesh(std::vector<Vertex> vertices, std::vector< unsigned int> indices, unsigned int vertices_len, unsigned int indices_len, bool singleSided, Mesh::Material my_material);
+	Mesh(std::vector<Vertex> vertices, std::vector< unsigned int> indices, unsigned int vertices_len, unsigned int indices_len, bool singleSided, Mesh::Material my_material, float albedo);
 
-	bool pixelInTriangle(glm::vec3* _triangle, bool _singleSided, glm::vec2 pixel, float &u, float &v, float &min_dist);
+	void updateBoundaries(Vertex & vertex);
+
+	static float edgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 pixel);
+
+	static float stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y);
+
+	static bool isPixelInTriangle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2 pixel, float &u, float &v, float &z);
 
 	~Mesh();
 

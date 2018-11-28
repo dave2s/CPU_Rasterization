@@ -5,15 +5,16 @@ Mesh::Mesh()
 
 }
 
-Mesh::Mesh(std::vector<Vertex> _vertices, std::vector<unsigned int> _indices, unsigned int _vertices_len, unsigned int _indices_len, bool _singleSided, Mesh::Material my_material)
+Mesh::Mesh(std::vector<Vertex> _vertices, std::vector<unsigned int> _indices, unsigned int _vertices_len, unsigned int _indices_len, bool _singleSided, Mesh::Material my_material, float _albedo)
 {
 	vertices = _vertices;
 	indices = _indices;
-	/*for (unsigned int i = 0; i < _vertices_len; ++i) {
+	for (unsigned int i = 0; i < _vertices_len; ++i) {
 		updateBoundaries(vertices[i]);
-	}*/
+	}
 	//memcpy(indices, &_indices[0], sizeof(unsigned int)*_indices_len);
 	//indices = &_indices[0];
+	albedo = _albedo;
 	material = my_material;
 	//color = material.diffuse_color;
 	indices_len = _indices_len;
@@ -21,17 +22,19 @@ Mesh::Mesh(std::vector<Vertex> _vertices, std::vector<unsigned int> _indices, un
 	//albedo = glm::f32vec3(_albedo);
 	//material_type = _material;
 }
-/*
+
 void Mesh::updateBoundaries(Vertex &vertex) {
-	for (unsigned char i = 0; i < (char)vertex.position.length(); ++i) {
+	//for x and y component of the vertex - 2D only
+	///need to convert to screenspace first
+	/*for (unsigned char i = 0; i < 2; ++i) {
 		if (vertex.position[i] < boundary_points[0][i]) {
 			boundary_points[0][i] = vertex.position[i];
 		}
 		if (vertex.position[i] > boundary_points[1][i]) {
 			boundary_points[1][i] = vertex.position[i];
 		}
-	}
-}*/
+	}*/
+}
 /*
 void Mesh::ClearMesh()
 {
@@ -63,54 +66,29 @@ bool RT_Mesh::shadowRayHitTriangle(std::vector<glm::vec3> _triangle, Ray *ray, b
 	return true; //successful hit
 }*/
 
-bool Mesh::pixelInTriangle(glm::vec3* _triangle, bool _singleSided, glm::vec2 pixel, float &u, float &v,float &min_dist) {
+/*
+return > 0 if c is on the right side of v0-v1 line
+return 0 if c lays on v0-v1 line
+return <0 if c lays on the left side of v0-v1 line
+*/
+float Mesh::edgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 c) {
+	return (v1.y - v0.y)*(c.x - v0.x) - (v1.x - v0.x)*(c.y - v0.y);
+}
+
+float Mesh::stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y) {
+	return prev_edge + edge_step_y + edge_step_x;
+}
+
+bool Mesh::isPixelInTriangle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2 pixel, float &u, float &v,float &z) {
 #ifndef SMOOTH_SHADING
-	glm::f32vec3 N = calcTriangleUnNormal(_triangle);
+	//glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
 #else
 	glm::fvec3 N = calcTriangleNormalSmooth(_triangle);
 #endif
-	//float triangle_area = N.length()/2.f; //plocha Rovnobezniku/2 dana vektorovym soucinem dvou vektoru (nenormovana normala)
-	//std::cout << triangle_area << " << tohle by nemelo hazet kraviny" << std::endl;
-	//v = N.(AB x AP) / N.N
-	float NN = glm::dot(N, N);//N.N
-
-	///Calc PHit
-	//Let's ommit H's functions and code everything again in here..hopefully helps
-	//check if parallel
-	//float RdotN = glm::dot(N, ray->direction);
-	//if (isPrimary) RdotN*=(-1.0f);
-
-	/*if ((0.0001f > glm::abs(RdotN)) || (RdotN > 0 && _singleSided)) {//parallel or facing other way
-		return false;
-	}*/
-
-	/*float d = glm::dot(N, _triangle[0]); // using first vertex by convention, distance to triangle plane
-
-	/*t = (glm::dot(N, ray->origin) + d)/RdotN;
-	if (t < 0 + (isPrimary ? CAM_NEAR_PLANE : 0.001f) || t>min_dist) return false; //triangle is behind the origin
-
-	PHit = ray->origin + t * ray->direction; //P=O+tR parametricke vyjadreni primky, t je vzdalenost od O po smeru R
-	*/
-	///je v trojuhelniku?
-
-	glm::vec3 edge = _triangle[1] - _triangle[0];
-	glm::vec3 vp = pixel - _triangle[0];
-	glm::vec3 C = glm::cross(edge, vp); //kolmobezka s rovinou trojuhelniku
-	if (glm::dot(N, C) < 0) return false; //
-
-	edge = _triangle[2] - _triangle[1];
-	vp = pixel - _triangle[1];
-	C = glm::cross(edge, vp);
-	u = glm::dot(N, C);
-	if (u < 0) return false;
-
-	edge = _triangle[0] - _triangle[2];
-	vp = pixel - _triangle[2];
-	C = glm::cross(edge, vp);
-	v = glm::dot(N, C);
-	if (v < 0) return false;
-
-	u /= NN; v /= NN;
+	//expecting counter clockwise triangle indices
+	if (edgeFunction(v0, v1, pixel) > 0) return false;
+	if (edgeFunction(v1, v2, pixel) > 0) return false;
+	if (edgeFunction(v2, v0, pixel) > 0) return false;
 	return true;
 }
 /*

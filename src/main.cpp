@@ -11,10 +11,12 @@
 #include "Mesh.h"
 #include "ModelLoader.h"
 #include "Camera.h"
+#include "main.h"
 
 #define WIDTH 640
 #define HEIGHT 480
 #define PROFILE
+#define OUT
 
 bool quit = false;
 enum ERROR_CODES {E_OK, E_FAIL}; // ???
@@ -143,11 +145,62 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 	}*/
 }
 
+void createZBuffer(std::vector<float> &zbuffer)
+{
+	zbuffer = std::vector<float>(HEIGHT*WIDTH);
+	for (uint16_t i = 0; i < HEIGHT*WIDTH; ++i) {
+		zbuffer[i] = inf;
+	}
+}
+
+void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
+{
+	v0.x = (CAM_NEAR_PLANE * v0.x) / (-v0.z);
+	v0.y = (CAM_NEAR_PLANE * v0.y) / (-v0.z);
+	v0.z *= -1;
+
+	v1.x = (CAM_NEAR_PLANE * v1.x) / (-v1.z);
+	v1.y = (CAM_NEAR_PLANE * v1.y) / (-v1.z);
+	v1.z *= -1;
+
+	v2.x = (CAM_NEAR_PLANE * v2.x) / (-v2.z);
+	v2.y = (CAM_NEAR_PLANE * v2.y) / (-v2.z);
+	v2.z *= -1;
+}
+//(-1,1)
+void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam)
+{
+	float inverse_height = 1 / 2;
+	float inverse_width = 1 / 2;
+	//throw vertices into interval (-1,1)
+	v0.x = 2 * v0.x * inverse_width ;
+	v0.y = 2 * v0.y * inverse_height;
+
+	v1.x = 2 * v1.x * inverse_width;
+	v1.y = 2 * v1.y * inverse_height;
+
+	v2.x = 2 * v2.x * inverse_width;
+	v2.y = 2 * v2.y * inverse_height;
+}
+//(0 < v.x < width);(height > v.y > 0)
+void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
+	v0.x = (v0.x + 1) / 2 * WIDTH;
+	v0.y = (1 - v0.y) / 2 * HEIGHT;
+
+	v1.x = (v1.x + 1) / 2 * WIDTH;
+	v1.y = (1 - v1.y) / 2 * HEIGHT;
+
+	v2.x = (v2.x + 1) / 2 * WIDTH;
+	v2.y = (1 - v2.y) / 2 * HEIGHT;
+}
+
 int main(int argc, char* argv[]) {
-	bool exit = false;
+	quit = false;
 	SDL_Window* main_window; SDL_Renderer* renderer;
 	SDL_Surface* frame_buffer; SDL_Texture* texture;
 	SDL_Event event;
+
+	std::vector<float> zbuffer;
 
 	main_window = SDL_CreateWindow("Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
 	if (main_window == NULL) {
@@ -164,14 +217,17 @@ int main(int argc, char* argv[]) {
 	ModelLoader::loadScene(model_path, mesh_list);
 
 	uint16_t triangle_count = 0;
-	while (!exit)
+	glm::u8vec3 sky_color = glm::u8vec3(150, 150, 200);
+	while (!quit)
 	{
 
 #ifdef PROFILE
 		auto start = std::chrono::high_resolution_clock::now();
 #endif
+		createZBuffer(OUT zbuffer);
 
 		for (auto mesh = mesh_list.begin(); mesh != mesh_list.end(); ++mesh) {
+
 			triangle_count = (*mesh)->getTriangleCount();
 			for (uint16_t i = 0; i < triangle_count; ++i) {
 
@@ -179,17 +235,44 @@ int main(int argc, char* argv[]) {
 				glm::vec3 v1 = (*mesh)->getTriangle(i)[1].position;
 				glm::vec3 v2 = (*mesh)->getTriangle(i)[2].position;
 
+				//move vertices to camera space
+				v0 = (camera.view_matrix) * glm::vec4(v0, 1.f);
+				v1 = (camera.view_matrix) * glm::vec4(v1, 1.f);
+				v2 = (camera.view_matrix) * glm::vec4(v2, 1.f);
+
+				//move vertices to screen space
+				perspectiveDivide(OUT v0, OUT v1, OUT v2);
+
+				convertToNDC(OUT v0, OUT v1, OUT v2,camera);
+				convertToRasterSpace(OUT v0, OUT v1, OUT v2);
+				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost)slo priradit vrcholy pixelum
+
 				///todo - Je zavhodno prochazet pouze pixely v okoli trojuhelnika - je treba ho obalit do obdelnika rovnobezneho s osami (axis aligned 2d bounding box)
-				float min_dist; float u; float v;
+				float t; float u; float v;
+				
+				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
+				/*
+				float edge0; float edge_y_step; float edge_x_step;
+				edge0 = Mesh::edgeFunction(v0, v1, glm::vec2(0, 0));
+				edge_y_step = (v1.x-v0.x);
+				edge_x_step = (v1.y-v0.y);
+*/
 				for (int y = 0; y < HEIGHT; ++y) {
+					//SDL_PollEvent(&event); //so the app does not stop responding while drawing
 					while (SDL_PollEvent(&event)) {
 						MovePolling(event, camera);
 					}
-					//SDL_PollEvent(&event); //so the app does not stop responding while drawing
+					OUT float z;
 					for (int x = 0; x < WIDTH; ++x) {
-						if (Mesh::pixelInTriangle(glm::vec3* _triangle, bool _singleSided, glm::vec(x,y), u, v, min_dist))
+						setRGBAPixel(x, y, frame_buffer, sky_color);
+
+						if (Mesh::isPixelInTriangle(v0, v1, v2, glm::vec2(x,y),u,v,z))
 						{
-							setRGBAPixel(x, y, frame_buffer, (*mesh)->material.diffuse_color);
+							if (z < zbuffer[x + y * HEIGHT]) {
+								zbuffer[x+y*HEIGHT] = z;
+								t = 1 - u - v; // barrycentric
+								setRGBAPixel(x, y, frame_buffer, (*mesh)->material.ambient_color);
+							}
 						}
 						//setRGBAPixel(x, y, frame_buffer, glm::u8vec3(150, 150, 200));
 
