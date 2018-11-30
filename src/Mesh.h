@@ -4,7 +4,7 @@
 
 class Mesh
 {
-	const float inf = std::numeric_limits<float>::max();
+const float inf = std::numeric_limits<float>::max();
 public:
 	Mesh();
 
@@ -55,7 +55,7 @@ public:
 
 	static float stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y);
 
-	static bool isPixelInTriangle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2 pixel, float &u, float &v, float &z);
+	static void isPixelInTriangle(bool &is_pixel_in_triangle, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2 pixel, float &u, float &v, float &z);
 
 	~Mesh();
 

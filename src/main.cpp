@@ -148,7 +148,7 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 void createZBuffer(std::vector<float> &zbuffer)
 {
 	zbuffer = std::vector<float>(HEIGHT*WIDTH);
-	for (uint16_t i = 0; i < HEIGHT*WIDTH; ++i) {
+	for (uint32_t i = 0; i < HEIGHT*WIDTH; ++i) {
 		zbuffer[i] = inf;
 	}
 }
@@ -167,20 +167,17 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 	v2.y = (CAM_NEAR_PLANE * v2.y) / (-v2.z);
 	v2.z *= -1;
 }
-//(-1,1)
+//
 void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam)
 {
-	float inverse_height = 1 / 2;
-	float inverse_width = 1 / 2;
-	//throw vertices into interval (-1,1)
-	v0.x = 2 * v0.x * inverse_width ;
-	v0.y = 2 * v0.y * inverse_height;
+	v0.x = v0.x * cam.scale * cam.aspect_ratio;
+	v0.y = v0.y * cam.scale;
 
-	v1.x = 2 * v1.x * inverse_width;
-	v1.y = 2 * v1.y * inverse_height;
+	v1.x = v1.x * cam.scale * cam.aspect_ratio;
+	v1.y = v1.y * cam.scale;
 
-	v2.x = 2 * v2.x * inverse_width;
-	v2.y = 2 * v2.y * inverse_height;
+	v2.x = v2.x * cam.scale * cam.aspect_ratio;
+	v2.y = v2.y * cam.scale;
 }
 //(0 < v.x < width);(height > v.y > 0)
 void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
@@ -229,7 +226,7 @@ int main(int argc, char* argv[]) {
 		for (auto mesh = mesh_list.begin(); mesh != mesh_list.end(); ++mesh) {
 
 			triangle_count = (*mesh)->getTriangleCount();
-			for (uint16_t i = 0; i < triangle_count; ++i) {
+			for (uint32_t i = 0; i < triangle_count; ++i) {
 
 				glm::vec3 v0 = (*mesh)->getTriangle(i)[0].position;
 				glm::vec3 v1 = (*mesh)->getTriangle(i)[1].position;
@@ -262,11 +259,13 @@ int main(int argc, char* argv[]) {
 					while (SDL_PollEvent(&event)) {
 						MovePolling(event, camera);
 					}
-					OUT float z;
+					OUT float z; OUT bool is_pixel_in_triangle;
 					for (int x = 0; x < WIDTH; ++x) {
 						setRGBAPixel(x, y, frame_buffer, sky_color);
 
-						if (Mesh::isPixelInTriangle(v0, v1, v2, glm::vec2(x,y),u,v,z))
+						Mesh::isPixelInTriangle(is_pixel_in_triangle,v0, v1, v2, glm::vec2(x, y), u, v, z);
+
+						if (is_pixel_in_triangle)
 						{
 							if (z < zbuffer[x + y * HEIGHT]) {
 								zbuffer[x+y*HEIGHT] = z;

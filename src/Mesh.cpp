@@ -79,17 +79,18 @@ float Mesh::stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step
 	return prev_edge + edge_step_y + edge_step_x;
 }
 
-bool Mesh::isPixelInTriangle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2 pixel, float &u, float &v,float &z) {
+void Mesh::isPixelInTriangle(bool &is_pixel_in_triangle, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2 pixel, float &u, float &v, float &z) {
 #ifndef SMOOTH_SHADING
 	//glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
 #else
 	glm::fvec3 N = calcTriangleNormalSmooth(_triangle);
 #endif
 	//expecting counter clockwise triangle indices
-	if (edgeFunction(v0, v1, pixel) < 0) return false;
-	if (edgeFunction(v1, v2, pixel) < 0) return false;
-	if (edgeFunction(v2, v0, pixel) < 0) return false;
-	return true;
+	///TODO edge overlap - convention is that left or topleft edge is priority...overlap occures when edge function returns 0, so if edgeFun()
+	is_pixel_in_triangle = true;
+	is_pixel_in_triangle &= (edgeFunction(v0, v1, pixel) >= 0);
+	is_pixel_in_triangle &= (edgeFunction(v1, v2, pixel) >= 0);
+	is_pixel_in_triangle &= (edgeFunction(v2, v0, pixel) >= 0);
 }
 /*
 bool Mesh::pixelInTriangle(glm::vec3* _triangle,bool isPrimary, bool _singleSided,float& distance, glm::vec2 &pixel,float min_dist)
