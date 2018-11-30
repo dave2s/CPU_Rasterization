@@ -1,6 +1,6 @@
 #pragma once
 #define GLM_LEFT_HANDED
-#include "GLM\glm.hpp"
+#include "glm/glm.hpp"
 
 #define CAM_NEAR_PLANE 0.1f
 #define CAM_FAR_PLANE 1000.0f

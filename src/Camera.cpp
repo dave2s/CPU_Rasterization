@@ -1,11 +1,11 @@
 #include "Camera.h"
 #include <string>
 #include <iostream>
-#include "GLM\gtc\matrix_transform.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 //#define DEBUG
 #ifdef DEBUG
 #define GLM_ENABLE_EXPERIMENTAL
-#include "GLM\gtx\string_cast.hpp"
+#include "glm/gtx/string_cast.hpp"
 #endif
 
 

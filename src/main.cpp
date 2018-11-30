@@ -1,3 +1,5 @@
+#define SDL_MAIN_HANDLED
+
 #include <iostream>
 #include <iomanip>//to set FP precision in std::stream<< outputs
 #include <string>
@@ -5,7 +7,7 @@
 #include "SDL.h"
 #include "SDL_pixels.h"
 #include "SDL_render.h"
-#include "glm\glm.hpp"
+#include "glm/glm.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/string_cast.hpp"
 #include "Mesh.h"
@@ -214,6 +216,8 @@ int main(int argc, char* argv[]) {
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
 	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-Mirror.obj";
+//	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
+
 	ModelLoader::loadScene(model_path, mesh_list);
 
 	uint16_t triangle_count = 0;
