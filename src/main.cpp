@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
 	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-Mirror.obj";
-//	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
+//	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Mirror.obj";
 
 	ModelLoader::loadScene(model_path, mesh_list);
 
@@ -232,9 +232,11 @@ int main(int argc, char* argv[]) {
 			triangle_count = (*mesh)->getTriangleCount();
 			for (uint32_t i = 0; i < triangle_count; ++i) {
 
-				glm::vec3 v0 = (*mesh)->getTriangle(i)[0].position;
-				glm::vec3 v1 = (*mesh)->getTriangle(i)[1].position;
-				glm::vec3 v2 = (*mesh)->getTriangle(i)[2].position;
+				Mesh::Vertex* triangle = (*mesh)->getTriangle(i);
+				glm::vec3 v0 = triangle[0].position;
+				glm::vec3 v1 = triangle[1].position;
+				glm::vec3 v2 = triangle[2].position;
+				delete triangle;
 
 				//move vertices to camera space
 				v0 = (camera.view_matrix) * glm::vec4(v0, 1.f);

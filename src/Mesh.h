@@ -37,7 +37,10 @@ public:
 
 	//Return triangle by index of the triangle
 	Vertex* getTriangle(unsigned int idx) {
-		Vertex triangle[3] = { vertices[indices[0 + 3 * idx]],vertices[indices[1 + 3 * idx]], vertices[indices[2 + 3 * idx]] };
+		Vertex* triangle = new Vertex[3];
+		triangle[0] = vertices[indices[0 + 3 * idx]];
+		triangle[1] = vertices[indices[1 + 3 * idx]];
+		triangle[2] = vertices[indices[2 + 3 * idx]];
 		return triangle;
 	}
 
