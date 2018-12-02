@@ -194,18 +194,20 @@ void clearFrameBuffer(SDL_Surface* frame_buffer) {
 		}
 	}
 }
+//Returns true if all projected vertices lay outside of view frustum
+bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
+	//left and right
+	if (v0.x < 0 && v1.x < 0 && v2.x < 0) return true;
+	if (v0.x >WIDTH && v1.x > WIDTH && v2.x > WIDTH) return true;
+	//top and bottom
+	if (v0.y < 0 && v1.y < 0 && v2.y < 0) return true;
+	if (v0.y > HEIGHT && v1.y > HEIGHT && v2.y > HEIGHT) return true;
+	//near and far
+	if (v0.z < CAM_NEAR_PLANE && v1.z < CAM_NEAR_PLANE && v2.z < CAM_NEAR_PLANE) return true;
+	if (v0.y > CAM_FAR_PLANE && v1.y > CAM_FAR_PLANE && v2.y > CAM_FAR_PLANE) return true;
 
-/*void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &camera)
-{
-	v0.x = ((v0.x / camera.aspect_ratio*camera.scale) + 1.f) *((float)WIDTH / 2.0f);
-	v0.y = ((v0.y / camera.scale) - 1.f) *((float)HEIGHT / -2.0f);
-
-	v1.x = ((v1.x / camera.aspect_ratio*camera.scale) + 1.f) *((float)WIDTH / 2.0f);
-	v1.y = ((v1.y / camera.scale) - 1.f) *((float)HEIGHT / -2.0f);
-
-	v2.x = ((v2.x / camera.aspect_ratio*camera.scale) + 1.f) *((float)WIDTH / 2.0f);
-	v2.y = ((v2.y / camera.scale) - 1.f) *((float)HEIGHT / -2.0f);
-}*/
+	return false;
+}
 
 
 int main(int argc, char* argv[]) {
@@ -228,7 +230,7 @@ int main(int argc, char* argv[]) {
 	
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 3.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
-	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-Original.obj";
+	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-original.obj";
 //	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
 
 	ModelLoader::loadScene(model_path, mesh_list);
@@ -265,13 +267,12 @@ int main(int argc, char* argv[]) {
 				//move vertices to screen space
 				perspectiveDivide(OUT v0, OUT v1, OUT v2);
 
-				//convertToRasterSpace(OUT v0,OUT v1,OUT v2);
-
 				//convertToNDC(OUT v0, OUT v1, OUT v2, camera);
 				convertToRasterSpace(OUT v0, OUT v1, OUT v2,camera);
 				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost)slo priradit vrcholy pixelum
 
-				///todo - Je zavhodno prochazet pouze pixely v okoli trojuhelnika - je treba ho obalit do obdelnika rovnobezneho s osami (axis aligned 2d bounding box)
+				if (frustumCulling(v0, v1, v2)) continue;
+
 				glm::uvec2 bounding_box[2];
 				Mesh::computeTriangleBoundingBox(bounding_box,v0, v1, v2);
 
@@ -319,7 +320,7 @@ int main(int argc, char* argv[]) {
 		auto elapsed = std::chrono::high_resolution_clock::now() - start;
 		long long microseconds = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
 		std::cout << "Frametime: " << std::fixed << std::setprecision(2) << (float)microseconds / 1000000.f << "s";
-		std::cout << "; " << std::fixed << std::setprecision(2) << 1000000.f / (float)microseconds << "	fps" << std::endl;
+		std::cout << "; " << std::fixed << std::setprecision(2) << 1000000.f / (float)microseconds << " fps" << std::endl;
 		std::flush(std::cout);
 #endif
 
