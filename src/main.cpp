@@ -1,5 +1,5 @@
 #define SDL_MAIN_HANDLED
-
+#include "Defines.h"
 #include <iostream>
 #include <iomanip>//to set FP precision in std::stream<< outputs
 #include <string>
@@ -14,11 +14,6 @@
 #include "ModelLoader.h"
 #include "Camera.h"
 #include "main.h"
-
-#define WIDTH 640
-#define HEIGHT 480
-#define PROFILE
-#define OUT
 
 bool quit = false;
 enum ERROR_CODES {E_OK, E_FAIL}; // ???
@@ -147,9 +142,8 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 	}*/
 }
 
-void createZBuffer(std::vector<float> &zbuffer)
+void resetZBuffer(std::vector<float> &zbuffer,float far_plane)
 {
-	zbuffer = std::vector<float>(HEIGHT*WIDTH);
 	for (uint32_t i = 0; i < HEIGHT*WIDTH; ++i) {
 		zbuffer[i] = inf;
 	}
@@ -159,39 +153,60 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 {
 	v0.x = (CAM_NEAR_PLANE * v0.x) / (-v0.z);
 	v0.y = (CAM_NEAR_PLANE * v0.y) / (-v0.z);
-	v0.z *= -1;
+	v0.z *= -1.f;
 
 	v1.x = (CAM_NEAR_PLANE * v1.x) / (-v1.z);
 	v1.y = (CAM_NEAR_PLANE * v1.y) / (-v1.z);
-	v1.z *= -1;
+	v1.z *= -1.f;
 
 	v2.x = (CAM_NEAR_PLANE * v2.x) / (-v2.z);
 	v2.y = (CAM_NEAR_PLANE * v2.y) / (-v2.z);
-	v2.z *= -1;
+	v2.z *= -1.f;
 }
-//
+//(-1,1)
 void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam)
 {
-	v0.x = v0.x * cam.scale * cam.aspect_ratio;
-	v0.y = v0.y * cam.scale;
+	v0.x =2*v0.x/0.5 -0.5 / 1.f;
+	v0.y = 2*v0.y/0.5;
 
-	v1.x = v1.x * cam.scale * cam.aspect_ratio;
-	v1.y = v1.y * cam.scale;
+	v1.x = 2*v1.x/0.5 - 0.5 / 1.f;
+	v1.y = 2*v1.y/0.5;
 
-	v2.x = v2.x * cam.scale * cam.aspect_ratio;
-	v2.y = v2.y * cam.scale;
+	v2.x = 2*v2.x/0.5 - 0.5 / 13.f;
+	v2.y = 2*v2.y/0.5;
 }
 //(0 < v.x < width);(height > v.y > 0)
-void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
-	v0.x = (v0.x + 1) / 2 * WIDTH;
-	v0.y = (1 - v0.y) / 2 * HEIGHT;
+void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam) {
+	v0.x = (((v0.x/(cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v0.y = (((1 - v0.y/cam.scale) / 2)* HEIGHT);// / cam.scale;
 
-	v1.x = (v1.x + 1) / 2 * WIDTH;
-	v1.y = (1 - v1.y) / 2 * HEIGHT;
+	v1.x = (((v1.x/(cam.aspect_ratio*cam.scale) + 1) /2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v1.y = (((1 - v1.y/cam.scale) / 2)* HEIGHT);// / (cam.scale);
 
-	v2.x = (v2.x + 1) / 2 * WIDTH;
-	v2.y = (1 - v2.y) / 2 * HEIGHT;
+	v2.x = (((v2.x/(cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v2.y = (((1 - v2.y/cam.scale) / 2 )* HEIGHT);// / (cam.scale);
 }
+
+void clearFrameBuffer(SDL_Surface* frame_buffer) {
+	for (int y = 0; y < HEIGHT; ++y) {
+		for (int x = 0; x < WIDTH; ++x) {
+			setRGBAPixel(x, y, frame_buffer, glm::u8vec3(0));
+		}
+	}
+}
+
+/*void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &camera)
+{
+	v0.x = ((v0.x / camera.aspect_ratio*camera.scale) + 1.f) *((float)WIDTH / 2.0f);
+	v0.y = ((v0.y / camera.scale) - 1.f) *((float)HEIGHT / -2.0f);
+
+	v1.x = ((v1.x / camera.aspect_ratio*camera.scale) + 1.f) *((float)WIDTH / 2.0f);
+	v1.y = ((v1.y / camera.scale) - 1.f) *((float)HEIGHT / -2.0f);
+
+	v2.x = ((v2.x / camera.aspect_ratio*camera.scale) + 1.f) *((float)WIDTH / 2.0f);
+	v2.y = ((v2.y / camera.scale) - 1.f) *((float)HEIGHT / -2.0f);
+}*/
+
 
 int main(int argc, char* argv[]) {
 	quit = false;
@@ -200,6 +215,7 @@ int main(int argc, char* argv[]) {
 	SDL_Event event;
 
 	std::vector<float> zbuffer;
+	zbuffer = std::vector<float>(HEIGHT*WIDTH);
 
 	main_window = SDL_CreateWindow("Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
 	if (main_window == NULL) {
@@ -210,10 +226,10 @@ int main(int argc, char* argv[]) {
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
 	
-	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
+	Camera camera = Camera(glm::vec3(0.f, 1.f, 3.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
-	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-Mirror.obj";
-//	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Mirror.obj";
+	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-Original.obj";
+//	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
 
 	ModelLoader::loadScene(model_path, mesh_list);
 
@@ -225,8 +241,11 @@ int main(int argc, char* argv[]) {
 #ifdef PROFILE
 		auto start = std::chrono::high_resolution_clock::now();
 #endif
-		createZBuffer(OUT zbuffer);
-
+		resetZBuffer(OUT zbuffer,CAM_FAR_PLANE);
+		clearFrameBuffer(frame_buffer);
+		while (SDL_PollEvent(&event)) {
+			MovePolling(event, camera);
+		}
 		for (auto mesh = mesh_list.begin(); mesh != mesh_list.end(); ++mesh) {
 
 			triangle_count = (*mesh)->getTriangleCount();
@@ -246,11 +265,16 @@ int main(int argc, char* argv[]) {
 				//move vertices to screen space
 				perspectiveDivide(OUT v0, OUT v1, OUT v2);
 
-				convertToNDC(OUT v0, OUT v1, OUT v2,camera);
-				convertToRasterSpace(OUT v0, OUT v1, OUT v2);
+				//convertToRasterSpace(OUT v0,OUT v1,OUT v2);
+
+				//convertToNDC(OUT v0, OUT v1, OUT v2, camera);
+				convertToRasterSpace(OUT v0, OUT v1, OUT v2,camera);
 				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost)slo priradit vrcholy pixelum
 
 				///todo - Je zavhodno prochazet pouze pixely v okoli trojuhelnika - je treba ho obalit do obdelnika rovnobezneho s osami (axis aligned 2d bounding box)
+				glm::uvec2 bounding_box[2];
+				Mesh::computeTriangleBoundingBox(bounding_box,v0, v1, v2);
+
 				float t; float u; float v;
 				
 				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
@@ -260,36 +284,34 @@ int main(int argc, char* argv[]) {
 				edge_y_step = (v1.x-v0.x);
 				edge_x_step = (v1.y-v0.y);
 */
-				for (int y = 0; y < HEIGHT; ++y) {
+				glm::f32vec3 pixel_color;
+
+				float parallelogram_area = Mesh::edgeFunction(v0, v1, v2);
+
+				//for (int y = 0.5; y < HEIGHT; ++y) {
+				for (uint16_t y = bounding_box[0].y; y <= bounding_box[1].y; ++y) {
 					//SDL_PollEvent(&event); //so the app does not stop responding while drawing
-					while (SDL_PollEvent(&event)) {
-						MovePolling(event, camera);
-					}
 					OUT float z; OUT bool is_pixel_in_triangle;
-					for (int x = 0; x < WIDTH; ++x) {
-						setRGBAPixel(x, y, frame_buffer, sky_color);
-
-						Mesh::isPixelInTriangle(is_pixel_in_triangle,v0, v1, v2, glm::vec2(x, y), u, v, z);
-
-						if (is_pixel_in_triangle)
+					//for (int x = 0.5; x < WIDTH; ++x) {
+					for(uint16_t x = bounding_box[0].x;x <= bounding_box[1].x; ++x){
+						if(Mesh::isPixelInTriangle(v0, v1, v2, parallelogram_area, glm::vec2(x, y),t,u,v,z))
 						{
-							if (z < zbuffer[x + y * HEIGHT]) {
+							if (z < zbuffer[x + y * HEIGHT] && z > CAM_NEAR_PLANE && z < CAM_FAR_PLANE) {
 								zbuffer[x+y*HEIGHT] = z;
-								t = 1 - u - v; // barrycentric
-								setRGBAPixel(x, y, frame_buffer, (*mesh)->material.ambient_color);
+								pixel_color = (*mesh)->material.diffuse_color;
+								setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
 							}
 						}
 						//setRGBAPixel(x, y, frame_buffer, glm::u8vec3(150, 150, 200));
-
 					}//end row loop
 				}//end image loop/for each pixel loop
 			}//end triangle loop for a given mesh
 		}//end mesh loop
 
 		///Draw
-		SDL_LockSurface(frame_buffer);
+		//SDL_LockSurface(frame_buffer);
 		SDL_UpdateTexture(texture, NULL, frame_buffer->pixels, WIDTH * sizeof(Uint32));//
-		SDL_UnlockSurface(frame_buffer);
+		//SDL_UnlockSurface(frame_buffer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 

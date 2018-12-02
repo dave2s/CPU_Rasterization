@@ -1,4 +1,6 @@
 #include "Mesh.h"
+#include <algorithm>
+//#include "Camera.h"
 
 Mesh::Mesh()
 {
@@ -9,31 +11,46 @@ Mesh::Mesh(std::vector<Vertex> _vertices, std::vector<unsigned int> _indices, un
 {
 	vertices = _vertices;
 	indices = _indices;
-	for (unsigned int i = 0; i < _vertices_len; ++i) {
-		updateBoundaries(vertices[i]);
-	}
-	//memcpy(indices, &_indices[0], sizeof(unsigned int)*_indices_len);
-	//indices = &_indices[0];
 	albedo = _albedo;
 	material = my_material;
-	//color = material.diffuse_color;
 	indices_len = _indices_len;
 	singleSided = _singleSided;
-	//albedo = glm::f32vec3(_albedo);
-	//material_type = _material;
 }
 
-void Mesh::updateBoundaries(Vertex &vertex) {
+const glm::uvec2* Mesh::computeTriangleBoundingBox(glm::uvec2(&pixel_aligned_boundary_points)[2],glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2 ) {
 	//for x and y component of the vertex - 2D only
 	///need to convert to screenspace first
-	/*for (unsigned char i = 0; i < 2; ++i) {
-		if (vertex.position[i] < boundary_points[0][i]) {
-			boundary_points[0][i] = vertex.position[i];
+	//glm::uvec2 pixel_aligned_boundary_points[2];
+	glm::vec2 boundary_points[2] = { glm::vec2(inf), glm::vec2(-inf) };
+	for (unsigned char i = 0; i < 2; ++i) {
+		//min
+		if (v0[i] < boundary_points[0][i]) {
+			boundary_points[0][i] = v0[i];
+		}//max
+		if (v0[i] > boundary_points[1][i]) {
+			boundary_points[1][i] = v0[i];
 		}
-		if (vertex.position[i] > boundary_points[1][i]) {
-			boundary_points[1][i] = vertex.position[i];
+		//min
+		if (v1[i] < boundary_points[0][i]) {
+			boundary_points[0][i] = v1[i];
+		}//max
+		if (v1[i] > boundary_points[1][i]) {
+			boundary_points[1][i] = v1[i];
 		}
-	}*/
+		//min
+		if (v2[i] < boundary_points[0][i]) {
+			boundary_points[0][i] = v2[i];
+		}//max
+		if (v2[i] > boundary_points[1][i]) {
+			boundary_points[1][i] = v2[i];
+		}
+	}
+	for (unsigned char i = 0; i < 2; ++i) {
+		pixel_aligned_boundary_points[i].x = std::max(0,std::min(WIDTH-1,(int)std::floor(boundary_points[i].x)));
+		pixel_aligned_boundary_points[i].y = std::max(0, std::min(HEIGHT - 1, (int)std::floor(boundary_points[i].y)));
+	}
+
+	return pixel_aligned_boundary_points;
 }
 /*
 void Mesh::ClearMesh()
@@ -67,30 +84,63 @@ bool RT_Mesh::shadowRayHitTriangle(std::vector<glm::vec3> _triangle, Ray *ray, b
 }*/
 
 /*
-return > 0 if c is on the right side of v0-v1 line
+return > 0 if c is on the left side of v0-v1 line
 return 0 if c lays on v0-v1 line
-return <0 if c lays on the left side of v0-v1 line
+return <0 if c lays on the right side of v0-v1 line
+flip vertices v0 and v1 to invert the return values
 */
 float Mesh::edgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 c) {
-	return (v1.x - v0.x)*(c.y - v0.y) - (v1.y - v0.y)*(c.x - v0.x);
+	return (v1.y - v0.y)*(c.x - v0.x)-(v1.x - v0.x)*(c.y - v0.y);
 }
 
 float Mesh::stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y) {
 	return prev_edge + edge_step_y + edge_step_x;
 }
 
-void Mesh::isPixelInTriangle(bool &is_pixel_in_triangle, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec2 pixel, float &u, float &v, float &z) {
+bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, float &t, float &u,float &v, float &z) {
 #ifndef SMOOTH_SHADING
-	//glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
+	glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
 #else
 	glm::fvec3 N = calcTriangleNormalSmooth(_triangle);
 #endif
+#ifdef BACKFACE_CULLING
+	if (glm::dot(N, (glm::vec3(pixel, -inf) - glm::vec3(0))) < 0) {
+		return false;
+	}
+#endif
 	//expecting counter clockwise triangle indices
 	///TODO edge overlap - convention is that left or topleft edge is priority...overlap occures when edge function returns 0, so if edgeFun()
-	is_pixel_in_triangle = true;
-	is_pixel_in_triangle &= (edgeFunction(v0, v1, pixel) >= 0);
-	is_pixel_in_triangle &= (edgeFunction(v1, v2, pixel) >= 0);
-	is_pixel_in_triangle &= (edgeFunction(v2, v0, pixel) >= 0);
+	t = edgeFunction(v1, v2, pixel); //rozdil obdelniku, mozno nahlizet jako na kartezsky soucin ve 2d
+	u = edgeFunction(v2, v0, pixel); //nebo taky determinant matice kde na prvnim radku je deltax a deltay
+	v = edgeFunction(v0, v1, pixel); //pixelu s v0 a na druhem deltax a deltay vrcholu v0 v1.
+
+	if (u < 0 || v < 0 || t < 0) return false;
+	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
+	if (u == 0) {
+		glm::vec2 edge0 = glm::vec2(v1 - v0);
+		if (edge0.y < 0 || (edge0.y == 0 && edge0.x < 0));
+		return false;
+	}
+	if (v == 0) {
+		glm::vec2 edge1 = glm::vec2(v2 - v1);
+		if (edge1.y < 0 || (edge1.y == 0 && edge1.x < 0));
+		return false;
+	}
+	if (t == 0) {
+		glm::vec2 edge2 = glm::vec2(v0 - v2);
+		if (edge2.y < 0 || (edge2.y == 0 && edge2.x < 0));
+		return false;
+	}
+	//barycentric coordss
+	t /= parallelogram_area;
+	u /= parallelogram_area;
+	v /= parallelogram_area;
+
+	//pixbar distance between pixel and v0 in Screenspace
+
+	z = 1/(t/v0.z + u/v1.z + v/v2.z);
+
+	return true;
 }
 /*
 bool Mesh::pixelInTriangle(glm::vec3* _triangle,bool isPrimary, bool _singleSided,float& distance, glm::vec2 &pixel,float min_dist)

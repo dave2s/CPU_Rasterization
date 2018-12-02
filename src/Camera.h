@@ -2,7 +2,7 @@
 #define GLM_LEFT_HANDED
 #include "glm/glm.hpp"
 
-#define CAM_NEAR_PLANE 0.1f
+#define CAM_NEAR_PLANE 0.5f
 #define CAM_FAR_PLANE 1000.0f
 #define COORDS_FLOAT_WIDTH 2.0f
 #define COORDS_FLOAT_HEIGHT 2.0f
