@@ -50,8 +50,8 @@ public:
 	static glm::f32vec3 calcTriangleUnNormal(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
 		return glm::cross(v1-v0, v2-v0);
 	}
-	static glm::f32vec3 calcTriangleNormal(glm::vec3 vertices[3]) {
-		return glm::normalize(glm::cross(vertices[1] - vertices[0], vertices[2] - vertices[0]));
+	static glm::f32vec3 calcTriangleNormal(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
+		return glm::normalize(glm::cross(v1 - v0, v2 - v0));
 	}
 
 	Mesh(std::vector<Vertex> vertices, std::vector< unsigned int> indices, unsigned int vertices_len, unsigned int indices_len, bool singleSided, Mesh::Material my_material, float albedo);
@@ -62,7 +62,9 @@ public:
 
 	static float stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y);
 
-	static bool isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, float &t, float &u, float &v ,float &z);
+	static void calcFragmentProperties(Vertex & v0, Vertex & v1, Vertex & v2, glm::vec2 &uv, glm::vec3 &N, glm::vec2 &texture_coords);
+
+	static bool isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, glm::vec2 &uv ,float &z);
 
 	~Mesh();
 

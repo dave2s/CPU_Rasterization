@@ -276,7 +276,7 @@ int main(int argc, char* argv[]) {
 				glm::uvec2 bounding_box[2];
 				Mesh::computeTriangleBoundingBox(bounding_box,v0, v1, v2);
 
-				float t; float u; float v;
+				glm::vec2 uv;
 				
 				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
 				/*
@@ -295,11 +295,16 @@ int main(int argc, char* argv[]) {
 					OUT float z; OUT bool is_pixel_in_triangle;
 					//for (int x = 0.5; x < WIDTH; ++x) {
 					for(uint16_t x = bounding_box[0].x;x <= bounding_box[1].x; ++x){
-						if(Mesh::isPixelInTriangle(v0, v1, v2, parallelogram_area, glm::vec2(x, y),t,u,v,z))
+						if(Mesh::isPixelInTriangle(v0, v1, v2, parallelogram_area, glm::vec2(x, y),uv,z))
 						{
-							if (z < zbuffer[x + y * HEIGHT] && z > CAM_NEAR_PLANE && z < CAM_FAR_PLANE) {
-								zbuffer[x+y*HEIGHT] = z;
-								pixel_color = (*mesh)->material.diffuse_color;
+							if (z < zbuffer[x + y*HEIGHT]) {
+								zbuffer[x + y*HEIGHT] = z;
+								pixel_color = (*mesh)->material.ambient_color;
+
+								//
+								// Calculate shading and texturing
+								// calcFragmentProperties
+
 								setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
 							}
 						}

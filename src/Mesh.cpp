@@ -97,11 +97,23 @@ float Mesh::stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step
 	return prev_edge + edge_step_y + edge_step_x;
 }
 
-bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, float &t, float &u,float &v, float &z) {
+void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec2 &uv, glm::vec3 &N, glm::vec2 &texture_coords) {
+#ifndef SMOOTH_SHADING
+	glm::f32vec3 N = calcTriangleNormal(v0.position, v1.position, v2.position);
+#else
+	//Interpolate vertex normals using barycentric coordinates.
+	N =glm::normalize( (1-uv.x-uv.y)*v0.normal + uv.x*v1.normal + uv.y*v2.normal );
+
+	texture_coords = ((1 - uv.x - uv.y)*v0.tex_coords + uv.x*v1.tex_coords + uv.y*v2.tex_coords);
+#endif
+}
+
+bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, glm::vec2 &uv, float &z) {
 #ifndef SMOOTH_SHADING
 	glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
 #else
-	glm::fvec3 N = calcTriangleNormalSmooth(_triangle);
+	//For backface culling we use NOT interpolated normal which is same for the whole triangle
+	glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
 #endif
 #ifdef BACKFACE_CULLING
 	if (glm::dot(N, (glm::vec3(pixel, -inf) - glm::vec3(0))) < 0) {
@@ -110,10 +122,11 @@ bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &
 #endif
 	//expecting counter clockwise triangle indices
 	///TODO edge overlap - convention is that left or topleft edge is priority...overlap occures when edge function returns 0, so if edgeFun()
+	float t, u, v;
 	t = edgeFunction(v1, v2, pixel); //rozdil obdelniku, mozno nahlizet jako na kartezsky soucin ve 2d
 	u = edgeFunction(v2, v0, pixel); //nebo taky determinant matice kde na prvnim radku je deltax a deltay
 	v = edgeFunction(v0, v1, pixel); //pixelu s v0 a na druhem deltax a deltay vrcholu v0 v1.
-
+	
 	if (u < 0 || v < 0 || t < 0) return false;
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
 	if (t == 0) {
@@ -133,11 +146,10 @@ bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &
 	}
 	//barycentric coordss
 	t /= parallelogram_area;
-	u /= parallelogram_area;
-	v /= parallelogram_area;
+	uv.x = u/parallelogram_area;
+	uv.y = v/parallelogram_area;
 
-	//pixbar distance between pixel and v0 in Screenspace
-
+	//pixel depth in camera space
 	z = 1/(t/v0.z + u/v1.z + v/v2.z);
 
 	return true;

@@ -12,3 +12,4 @@
 #define OUT
 
 #define BACKFACE_CULLING
+#define SMOOTH_SHADING
