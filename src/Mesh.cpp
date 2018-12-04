@@ -116,19 +116,19 @@ bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &
 
 	if (u < 0 || v < 0 || t < 0) return false;
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
-	if (u == 0) {
-		glm::vec2 edge0 = glm::vec2(v1 - v0);
-		if (edge0.y < 0 || (edge0.y == 0 && edge0.x < 0));
-		return false;
-	}
-	if (v == 0) {
+	if (t == 0) {
 		glm::vec2 edge1 = glm::vec2(v2 - v1);
 		if (edge1.y < 0 || (edge1.y == 0 && edge1.x < 0));
 		return false;
 	}
-	if (t == 0) {
+	if (u == 0) {
 		glm::vec2 edge2 = glm::vec2(v0 - v2);
 		if (edge2.y < 0 || (edge2.y == 0 && edge2.x < 0));
+		return false;
+	}
+	if (v == 0) {
+		glm::vec2 edge0 = glm::vec2(v1 - v0);
+		if (edge0.y < 0 || (edge0.y == 0 && edge0.x < 0));
 		return false;
 	}
 	//barycentric coordss
