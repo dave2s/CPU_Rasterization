@@ -231,7 +231,10 @@ int main(int argc, char* argv[]) {
 	
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 3.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
-	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-original.obj";
+	//std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\sponza\\sponza.obj";
+	char current_dir[FILENAME_MAX];
+	GetCurrentDir(current_dir, FILENAME_MAX);
+	std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
 //	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
 
 	ModelLoader::loadScene(model_path, mesh_list/*, loaded_textures*/);

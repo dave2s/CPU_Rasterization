@@ -121,7 +121,8 @@ std::vector<Mesh::Texture> ModelLoader::loadTextures(aiMaterial *mtl, aiTextureT
 			Mesh::Texture tex;
 			unsigned char* img_data = nullptr;
 			size_t size;
-			tex.id = loadTextureFile(img_data, path.C_Str(), dir, size);
+			if( loadTextureFile(img_data, path.C_Str(), dir, size)==0)
+				continue;
 			memcpy(tex.data, img_data, size);
 			stbi_image_free(img_data);
 			tex.type = type_name;
@@ -136,15 +137,16 @@ std::vector<Mesh::Texture> ModelLoader::loadTextures(aiMaterial *mtl, aiTextureT
 uint32_t ModelLoader::loadTextureFile(unsigned char* img_data,const char *path, std::string &dir,size_t &size) {
 	//img_data = ???;
 	int width, height, channels;
-	unsigned char *data = stbi_load((dir+'/'+std::string(path)).c_str(),&width,&height,&channels,3);
-	if (data) {
+	*img_data = stbi_load((dir+'/'+std::string(path)).c_str(),&width,&height,&channels,3);
+	if (img_data) {
 		if (channels == 3)
-			std::vector<uint32_t>;
+		size =sizeof(unsigned char) * width * height * channels; 
 		else {
-			stbi_image_free(data);
+			stbi_image_free(img_data);
 			return 0;
 		}
 	}
+
 	uint32_t id = 1;
 	return id;
 }
