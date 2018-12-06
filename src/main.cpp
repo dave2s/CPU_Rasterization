@@ -20,6 +20,7 @@ enum ERROR_CODES {E_OK, E_FAIL}; // ???
 
 std::vector<Mesh*> mesh_list;
 //std::vector<Light*> light_list;
+std::vector<Mesh::Texture> loaded_textures;
 
 /*
 *	int x,y - top left origin coords of the drawn image space
@@ -233,7 +234,7 @@ int main(int argc, char* argv[]) {
 	std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\CornellBox\\CornellBox-original.obj";
 //	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
 
-	ModelLoader::loadScene(model_path, mesh_list);
+	ModelLoader::loadScene(model_path, mesh_list/*, loaded_textures*/);
 
 	uint16_t triangle_count = 0;
 	glm::u8vec3 sky_color = glm::u8vec3(150, 150, 200);

@@ -26,16 +26,20 @@ public:
 	};
 
 	struct Texture {
-		unsigned int id;
+		unsigned char* data;
+		uint32_t id;
 		std::string type;
 		std::string path;
+		//data?
 	};
+
 	float albedo;
 	Material material;
+	std::vector<Texture> textures;
 
 	//glm::vec2 boundary_points[2] = { glm::vec2(inf), glm::vec2(-inf) };
 
-	bool isSingleSided() { return singleSided; };
+	bool isSingleSided() { return single_sided; };
 	int getTriangleCount() { return indices_len / 3; }
 
 	//Return triangle by index of the triangle
@@ -54,7 +58,7 @@ public:
 		return glm::normalize(glm::cross(v1 - v0, v2 - v0));
 	}
 
-	Mesh(std::vector<Vertex> vertices, std::vector< unsigned int> indices, unsigned int vertices_len, unsigned int indices_len, bool singleSided, Mesh::Material my_material, float albedo);
+	Mesh(std::vector<Vertex> vertices, std::vector< unsigned int> indices, unsigned int vertices_len, unsigned int indices_len, bool singleSided, Mesh::Material my_material, float albedo, std::vector<Texture> textures);
 
 	static const glm::uvec2* computeTriangleBoundingBox(glm::uvec2(&pixel_aligned_boundary_points)[2],glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2);
 
@@ -73,6 +77,6 @@ private:
 	std::vector<Vertex> vertices;
 	uint16_t vertex_count;
 	uint16_t indices_len;
-	bool singleSided;
+	bool single_sided;
 };
 

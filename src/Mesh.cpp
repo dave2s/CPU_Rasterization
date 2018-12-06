@@ -7,14 +7,15 @@ Mesh::Mesh()
 
 }
 
-Mesh::Mesh(std::vector<Vertex> _vertices, std::vector<unsigned int> _indices, unsigned int _vertices_len, unsigned int _indices_len, bool _singleSided, Mesh::Material my_material, float _albedo)
+Mesh::Mesh(std::vector<Vertex> _vertices, std::vector<unsigned int> _indices, unsigned int _vertices_len, unsigned int _indices_len, bool _single_sided, Mesh::Material _material, float _albedo, std::vector<Texture> _textures)
 {
 	vertices = _vertices;
 	indices = _indices;
 	albedo = _albedo;
-	material = my_material;
+	material = _material;
 	indices_len = _indices_len;
-	singleSided = _singleSided;
+	single_sided = _single_sided;
+	textures = _textures;
 }
 
 const glm::uvec2* Mesh::computeTriangleBoundingBox(glm::uvec2(&pixel_aligned_boundary_points)[2],glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2 ) {

@@ -11,29 +11,13 @@ class ModelLoader
 public:
 	ModelLoader();
 
-	/*struct Texture {
-		unsigned int id;
-		std::string path;
-		std::string type;
-	};*/
-
-	static std::vector<Mesh::Texture> textures;
-
-	static void loadScene(std::string model_path, std::vector<Mesh*>& meshes);
-	//void processSceneTree(const aiScene* scene, std::vector<RT_Mesh*> meshes);
-
+	static void loadScene(std::string& model_path, std::vector<Mesh*>& meshes/*, std::vector<Mesh::Texture>& loaded_textures*/);
 
 	~ModelLoader();
 private:
 
-	//const aiScene* scene;
-	static void processSceneTree(const aiScene* scene, std::vector<Mesh*>& meshes, aiNode* node);
-	static Mesh* processTreeMesh(const aiScene* scene, aiMesh* mesh);
-	//	std::vector<RT_Mesh::Texture> loadTextures();
-
-		//std::vector<RT_Mesh::Texture> loadMaterialTextures(aiMaterial * mat, aiTextureType type, std::string typeName);
+	static void processSceneTree(const aiScene* scene, std::vector<Mesh*>& meshes, aiNode* node, std::string& dir/*, std::vector<Mesh::Texture>& loaded_textures*/);
+	static Mesh* processTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir/*, std::vector<Mesh::Texture>& loaded_textures*/);
+	static std::vector<Mesh::Texture> loadTextures(aiMaterial *mtl, aiTextureType type, std::string typeName, std::string &dir/*, std::vector<Mesh::Texture>& loaded_textures*/);
+	static uint32_t loadTextureFile(unsigned char* img_data,const char* path, std::string &dir, size_t &size);
 };
-
-
-
-

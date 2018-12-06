@@ -6,8 +6,8 @@
 #define U2F(uint_x) (float)uint_x/255.0f
 #define U8vec2F32vec(uint_vec) glm::f32vec3(U2F(uint_vec[0]),U2F(uint_vec[1],U2F(uint_vec[2])
 
-#define WIDTH 640
-#define HEIGHT 480
+#define WIDTH 800
+#define HEIGHT 600
 #define PROFILE
 #define OUT
 

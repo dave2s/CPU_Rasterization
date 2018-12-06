@@ -1,61 +1,50 @@
 #include <iostream>
 #include "ModelLoader.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
-
+//Prevzato z learnopengl.com/model-loading
+//
 
 ModelLoader::ModelLoader()
 {
 }
 
-void ModelLoader::loadScene(std::string model_path, std::vector<Mesh*>& meshes) {
+void ModelLoader::loadScene(std::string& model_path, std::vector<Mesh*>& meshes/*, std::vector<Mesh::Texture>& loaded_textures*/) {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(model_path, aiProcess_Triangulate | aiProcess_GenNormals /*| aiProcess_FlipUVs*/);
 	if (!scene || !scene->mRootNode || scene->mFlags & (AI_SCENE_FLAGS_INCOMPLETE | AI_SCENE_FLAGS_VALIDATION_WARNING)) {
 		std::cout << "Model importer failed. flags: " << scene->mFlags << std::endl;
 	}
-
+	std::string dir = model_path.substr(0, model_path.find_last_of('/'));
 	aiNode* node = scene->mRootNode;
-	processSceneTree(scene, meshes, node);
+	processSceneTree(scene, meshes, node, dir/*,loaded_textures*/);
 }
-/*
-void Model::processSceneTree(const aiScene* scene, std::vector<RT_Mesh*> meshes){
-	for (int i = 0; i < node->mNumMeshes; ++i)
-	{
-		aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-		meshes.push_back(processTreeMesh(scene, mesh));
-	}
-	// then do the same for each of its children
-	for (int i = 0; i < node->mNumChildren; ++i)
-	{
-		processSceneTree(scene, meshes, node->mChildren[i]);
-	}
-}*/
 
-void ModelLoader::processSceneTree(const aiScene* scene, std::vector<Mesh*> &meshes, aiNode* node) {
+void ModelLoader::processSceneTree(const aiScene* scene, std::vector<Mesh*> &meshes, aiNode* node, std::string& dir/*, std::vector<Mesh::Texture>& loaded_textures*/) {
 	for (unsigned int i = 0; i < node->mNumMeshes; ++i)
 	{
 		aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-		meshes.push_back(processTreeMesh(scene, mesh));
+		meshes.push_back(processTreeMesh(scene, mesh,dir/*,loaded_textures*/));
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; ++i)
 	{
-		processSceneTree(scene, meshes, node->mChildren[i]);
+		processSceneTree(scene, meshes, node->mChildren[i],dir/*,loaded_textures*/);
 	}
 }
 
-Mesh* ModelLoader::processTreeMesh(const aiScene* scene, aiMesh* mesh) {
+Mesh* ModelLoader::processTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir/*, std::vector<Mesh::Texture>& loaded_textures*/) {
 	std::vector< Mesh::Vertex >vertices;
 	std::vector<unsigned int> indices;
-	//glm::f32vec3 color = glm::f32vec3(1.f,1.f,1.f);
 	aiMaterial *mtl;
 	Mesh::Material my_material;
+	std::vector<Mesh::Texture> textures;
 
 	//RT_Mesh::MATERIAL_TYPE type = RT_Mesh::DIFFUSE;
 	//Mesh::MATERIAL_TYPE type = Mesh::PHONG;
 
-	//vertices = new RT_Mesh::Vertex[mesh->mNumVertices]();
-	//vertices = new RT_Mesh::Vertex[mesh->mNumVertices]();
+
 	glm::vec3 tmp;
 	for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
 		Mesh::Vertex v;
@@ -104,19 +93,60 @@ Mesh* ModelLoader::processTreeMesh(const aiScene* scene, aiMesh* mesh) {
 		my_material.specluar_color = glm::f32vec4(specular.r, specular.g, specular.b, specular.a);
 		my_material.shininess = shininess;
 
-	//	if (shininess > 999)
-		//	type = Mesh::MIRROR;
 
-		//color = glm::f32vec3(diffuse.r, diffuse.g, diffuse.b);
-
-		//std::vector<RT_Mesh::Texture> diff_Map = loadTextures(mtl, aiTextureType_DIFFUSE, "texture_diffuse");
-		//textures.insert(textures.end(), diff_Map.begin(), diff_Map.end());
-		//std::vector<RT_Mesh::Texture> spec_map = loadTextures(mtl, aiTextureType_SPECULAR, "texture_specular");
-		//textures.insert(textures.end(), spec_map.begin(), spec_map.end());
+		std::vector<Mesh::Texture> diff_Map = loadTextures(mtl, aiTextureType_DIFFUSE, "texture_diffuse",dir/*,loaded_textures*/);
+		textures.insert(textures.end(), diff_Map.begin(), diff_Map.end());
+		std::vector<Mesh::Texture> spec_map = loadTextures(mtl, aiTextureType_SPECULAR, "texture_specular",dir/*,loaded_textures*/);
+		textures.insert(textures.end(), spec_map.begin(), spec_map.end());
 	}
 
-	Mesh* my_mesh = new Mesh(vertices, indices, vertices.size(), indices.size(), false, my_material, 0.18f);
+	Mesh* my_mesh = new Mesh(vertices, indices, vertices.size(), indices.size(), false, my_material, 0.18f, textures);
 	return my_mesh;
+}
+
+std::vector<Mesh::Texture> ModelLoader::loadTextures(aiMaterial *mtl, aiTextureType type, std::string type_name, std::string &dir/*, *std::vector<Mesh::Texture>& loaded_textures*/) {
+	std::vector<Mesh::Texture> textures;
+	for (uint32_t i = 0; i < mtl->GetTextureCount(type); ++i) {
+		aiString path;
+		mtl->GetTexture(type, i, &path);
+		bool tex_loaded;
+		/*for (uint32_t j = 0; j < loaded_textures.size; ++j) {
+			if (std::strcmp(loaded_textures[j].path.data(), path.C_Str()) == 0) {
+				textures.push_back(loaded_textures[j]);
+				tex_loaded = true;
+				break;
+			}
+		}*/
+		//if (!tex_loaded) {
+			Mesh::Texture tex;
+			unsigned char* img_data = nullptr;
+			size_t size;
+			tex.id = loadTextureFile(img_data, path.C_Str(), dir, size);
+			memcpy(tex.data, img_data, size);
+			stbi_image_free(img_data);
+			tex.type = type_name;
+			tex.path = path.C_Str();
+			textures.push_back(tex);
+			//loaded_textures.push_back(tex.path);
+		//}
+	}
+	return textures;
+}
+
+uint32_t ModelLoader::loadTextureFile(unsigned char* img_data,const char *path, std::string &dir,size_t &size) {
+	//img_data = ???;
+	int width, height, channels;
+	unsigned char *data = stbi_load((dir+'/'+std::string(path)).c_str(),&width,&height,&channels,3);
+	if (data) {
+		if (channels == 3)
+			std::vector<uint32_t>;
+		else {
+			stbi_image_free(data);
+			return 0;
+		}
+	}
+	uint32_t id = 1;
+	return id;
 }
 
 
