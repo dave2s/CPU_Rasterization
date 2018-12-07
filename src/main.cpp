@@ -302,7 +302,7 @@ int main(int argc, char* argv[]) {
 					for(uint16_t x = bounding_box[0].x;x <= bounding_box[1].x; ++x){
 						if(Mesh::isPixelInTriangle(v0.position, v1.position, v2.position, parallelogram_area, glm::vec2(x, y),uv,z))
 						{
-							if (z < zbuffer[x + y*HEIGHT]&& z < CAM_NEAR_PLANE) {
+							if (z < zbuffer[x + y*HEIGHT]/*&& z < CAM_NEAR_PLANE*/) {
 								zbuffer[x + y*HEIGHT] = z;
 								pixel_color = 0.9f*(*mesh)->material.diffuse_color+AMBIENT_LIGHT*(*mesh)->material.ambient_color;
 

@@ -98,8 +98,8 @@ Mesh* ModelLoader::processTreeMesh(const aiScene* scene, aiMesh* mesh, std::stri
 		textures.insert(textures.end(), diff_Map.begin(), diff_Map.end());
 		std::vector<Mesh::Texture> spec_map = loadTextures(mtl, aiTextureType_SPECULAR, "texture_specular",dir/*,loaded_textures*/);
 		textures.insert(textures.end(), spec_map.begin(), spec_map.end());
-		std::vector<Mesh::Texture> spec_map = loadTextures(mtl, aiTextureType_SPECULAR, "texture_bump", dir/*,loaded_textures*/);
-		textures.insert(textures.end(), spec_map.begin(), spec_map.end());
+		//std::vector<Mesh::Texture> bump_map = loadTextures(mtl, aiTextureType_DISPLACEMENT, "texture_bump", dir/*,loaded_textures*/);
+		//textures.insert(textures.end(), spec_map.begin(), spec_map.end());
 	}
 
 	Mesh* my_mesh = new Mesh(vertices, indices, vertices.size(), indices.size(), false, my_material, 0.18f, textures);

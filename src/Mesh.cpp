@@ -104,9 +104,8 @@ void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec2 
 #else
 	//Interpolate vertex normals using barycentric coordinates.
 	N =glm::normalize( (1-uv.x-uv.y)*v0.normal + uv.x*v1.normal + uv.y*v2.normal );
-
-	texture_coords = ((1 - uv.x - uv.y)*v0.tex_coords + uv.x*v1.tex_coords + uv.y*v2.tex_coords);
 #endif
+	texture_coords = ((1 - uv.x - uv.y)*v0.tex_coords + uv.x*v1.tex_coords + uv.y*v2.tex_coords);
 }
 
 bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, glm::vec2 &uv, float &z) {
@@ -132,17 +131,17 @@ bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
 	if (t == 0) {
 		glm::vec2 edge1 = glm::vec2(v2 - v1);
-		if (edge1.y < 0 || (edge1.y == 0 && edge1.x < 0));
+		if (edge1.y <= 0 || (edge1.y == 0 && edge1.x <= 0));
 		return false;
 	}
 	if (u == 0) {
 		glm::vec2 edge2 = glm::vec2(v0 - v2);
-		if (edge2.y < 0 || (edge2.y == 0 && edge2.x < 0));
+		if (edge2.y <= 0 || (edge2.y == 0 && edge2.x <= 0));
 		return false;
 	}
 	if (v == 0) {
 		glm::vec2 edge0 = glm::vec2(v1 - v0);
-		if (edge0.y < 0 || (edge0.y == 0 && edge0.x < 0));
+		if (edge0.y <= 0 || (edge0.y == 0 && edge0.x <= 0));
 		return false;
 	}
 	//barycentric coordss
