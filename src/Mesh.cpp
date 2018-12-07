@@ -151,7 +151,7 @@ bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &
 	uv.y = v/parallelogram_area;
 
 	//pixel depth in camera space
-	z = 1/(t/v0.z + u/v1.z + v/v2.z);
+	z = 1/(t/v0.z + uv.x/v1.z + uv.y/v2.z);
 
 	return true;
 }
