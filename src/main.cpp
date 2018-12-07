@@ -258,27 +258,27 @@ int main(int argc, char* argv[]) {
 			for (uint32_t i = 0; i < triangle_count; ++i) {
 
 				Mesh::Vertex* triangle = (*mesh)->getTriangle(i);
-				glm::vec3 v0 = triangle[0].position;
-				glm::vec3 v1 = triangle[1].position;
-				glm::vec3 v2 = triangle[2].position;
+				Mesh::Vertex v0 = triangle[0];
+				Mesh::Vertex v1 = triangle[1];
+				Mesh::Vertex v2 = triangle[2];
 				delete triangle;
 
 				//move vertices to camera space
-				v0 = (camera.view_matrix) * glm::vec4(v0, 1.f);
-				v1 = (camera.view_matrix) * glm::vec4(v1, 1.f);
-				v2 = (camera.view_matrix) * glm::vec4(v2, 1.f);
+				v0.position = (camera.view_matrix) * glm::vec4(v0.position, 1.f);
+				v1.position = (camera.view_matrix) * glm::vec4(v1.position, 1.f);
+				v2.position = (camera.view_matrix) * glm::vec4(v2.position, 1.f);
 
 				//move vertices to screen space
-				perspectiveDivide(OUT v0, OUT v1, OUT v2);
+				perspectiveDivide(OUT v0.position, OUT v1.position, OUT v2.position);
 
 				//convertToNDC(OUT v0, OUT v1, OUT v2, camera);
-				convertToRasterSpace(OUT v0, OUT v1, OUT v2,camera);
+				convertToRasterSpace(OUT v0.position, OUT v1.position, OUT v2.position,camera);
 				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost)slo priradit vrcholy pixelum
 
-				if (frustumCulling(v0, v1, v2)) continue;
+				if (frustumCulling(v0.position, v1.position, v2.position)) continue;
 
 				glm::uvec2 bounding_box[2];
-				Mesh::computeTriangleBoundingBox(bounding_box,v0, v1, v2);
+				Mesh::computeTriangleBoundingBox(bounding_box,v0.position, v1.position, v2.position);
 
 				glm::vec2 uv;
 				
@@ -291,15 +291,15 @@ int main(int argc, char* argv[]) {
 */
 				glm::f32vec3 pixel_color;
 
-				float parallelogram_area = Mesh::edgeFunction(v0, v1, v2);
+				float parallelogram_area = Mesh::edgeFunction(v0.position, v1.position, v2.position);
 
 				//for (int y = 0.5; y < HEIGHT; ++y) {
 				for (uint16_t y = bounding_box[0].y; y <= bounding_box[1].y; ++y) {
 					//SDL_PollEvent(&event); //so the app does not stop responding while drawing
-					OUT float z; OUT bool is_pixel_in_triangle;
+					OUT float z; //OUT bool is_pixel_in_triangle;
 					//for (int x = 0.5; x < WIDTH; ++x) {
 					for(uint16_t x = bounding_box[0].x;x <= bounding_box[1].x; ++x){
-						if(Mesh::isPixelInTriangle(v0, v1, v2, parallelogram_area, glm::vec2(x, y),uv,z))
+						if(Mesh::isPixelInTriangle(v0.position, v1.position, v2.position, parallelogram_area, glm::vec2(x, y),uv,z))
 						{
 							if (z < zbuffer[x + y*HEIGHT]) {
 								zbuffer[x + y*HEIGHT] = z;
@@ -308,8 +308,31 @@ int main(int argc, char* argv[]) {
 								//
 								// Calculate shading and texturing
 								// calcFragmentProperties
-
-								setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+								glm::vec3 N; glm::vec2 tex_coords;
+								Mesh::calcFragmentProperties(v0, v1, v2, uv, OUT N, OUT tex_coords);
+								if (!(*mesh)->textures.empty()) {
+									Mesh::Texture texture;
+									for (auto tex_itr = (*mesh)->textures.begin(); tex_itr != (*mesh)->textures.end();++tex_itr) {
+										if ((*tex_itr).type == "texture_diffuse") {
+											texture = (*tex_itr);
+										}
+									}
+									int tex_width = texture.width;
+									int tex_height = texture.height;
+									int texel_index = 3 * (int)(tex_coords.x + tex_width * tex_coords.y);
+									if (texel_index < (tex_width - 1)*(tex_height - 1)-2) {
+										unsigned char r = texture.data[0 + texel_index];
+										unsigned char g = texture.data[1 + texel_index];
+										unsigned char b = texture.data[2 + texel_index];
+										setRGBAPixel(x, y, frame_buffer, glm::u8vec3(r, g, b));
+									}
+									else {
+										setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+									}
+								}
+								else {
+									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+								}
 							}
 						}
 						//setRGBAPixel(x, y, frame_buffer, glm::u8vec3(150, 150, 200));

@@ -19,5 +19,5 @@ private:
 	static void processSceneTree(const aiScene* scene, std::vector<Mesh*>& meshes, aiNode* node, std::string& dir/*, std::vector<Mesh::Texture>& loaded_textures*/);
 	static Mesh* processTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir/*, std::vector<Mesh::Texture>& loaded_textures*/);
 	static std::vector<Mesh::Texture> loadTextures(aiMaterial *mtl, aiTextureType type, std::string typeName, std::string &dir/*, std::vector<Mesh::Texture>& loaded_textures*/);
-	static uint32_t loadTextureFile(unsigned char* img_data,const char* path, std::string &dir, size_t &size);
+	static uint32_t loadTextureFile(unsigned char** img_data,const char* path, std::string &dir, int& width, int& height, int& channels);
 };

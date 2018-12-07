@@ -119,12 +119,16 @@ std::vector<Mesh::Texture> ModelLoader::loadTextures(aiMaterial *mtl, aiTextureT
 		}*/
 		//if (!tex_loaded) {
 			Mesh::Texture tex;
-			unsigned char* img_data = nullptr;
-			size_t size;
-			if( loadTextureFile(img_data, path.C_Str(), dir, size)==0)
+			//unsigned char* img_data = nullptr;
+			int width; int height; int channels;
+			tex.id = loadTextureFile(&tex.data, path.C_Str(), dir, width, height, channels);
+			if( tex.id==0)
 				continue;
-			memcpy(tex.data, img_data, size);
-			stbi_image_free(img_data);
+			//memcpy(tex.data, img_data, size);
+			//stbi_image_free(img_data);
+			tex.height = height;
+			tex.width = width;
+			tex.channels = channels;
 			tex.type = type_name;
 			tex.path = path.C_Str();
 			textures.push_back(tex);
@@ -134,19 +138,16 @@ std::vector<Mesh::Texture> ModelLoader::loadTextures(aiMaterial *mtl, aiTextureT
 	return textures;
 }
 
-uint32_t ModelLoader::loadTextureFile(unsigned char* img_data,const char *path, std::string &dir,size_t &size) {
+uint32_t ModelLoader::loadTextureFile(unsigned char** img_data,const char *path, std::string &dir, int& width, int& height, int& channels) {
 	//img_data = ???;
-	int width, height, channels;
+	
 	*img_data = stbi_load((dir+'/'+std::string(path)).c_str(),&width,&height,&channels,3);
 	if (img_data) {
-		if (channels == 3)
-		size =sizeof(unsigned char) * width * height * channels; 
-		else {
+		if (channels != 3){
 			stbi_image_free(img_data);
 			return 0;
 		}
 	}
-
 	uint32_t id = 1;
 	return id;
 }

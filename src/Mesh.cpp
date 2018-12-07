@@ -47,7 +47,7 @@ const glm::uvec2* Mesh::computeTriangleBoundingBox(glm::uvec2(&pixel_aligned_bou
 		}
 	}
 	for (unsigned char i = 0; i < 2; ++i) {
-		pixel_aligned_boundary_points[i].x = std::max(0,std::min(WIDTH-1,(int)std::floor(boundary_points[i].x)));
+		pixel_aligned_boundary_points[i].x = std::max(0, std::min(WIDTH - 1, (int)std::floor(boundary_points[i].x)));
 		pixel_aligned_boundary_points[i].y = std::max(0, std::min(HEIGHT - 1, (int)std::floor(boundary_points[i].y)));
 	}
 

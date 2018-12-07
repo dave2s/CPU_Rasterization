@@ -30,6 +30,9 @@ public:
 		uint32_t id;
 		std::string type;
 		std::string path;
+		int width;
+		int height;
+		int channels;
 		//data?
 	};
 
