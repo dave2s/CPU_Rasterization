@@ -231,10 +231,11 @@ int main(int argc, char* argv[]) {
 	
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 3.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
-	//std::string model_path = "D:\\Users\\David\\Documents\\2MIT\\Graphics\\OpenGL\\OpenGLApps\\Raytracer\\Raytracer\\Models\\sponza\\sponza.obj";
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
-	std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
+	std::string model_path = "example/sponza/sponza.obj";
+	//std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
+	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
 //	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
 
 	ModelLoader::loadScene(model_path, mesh_list/*, loaded_textures*/);
@@ -301,26 +302,25 @@ int main(int argc, char* argv[]) {
 					for(uint16_t x = bounding_box[0].x;x <= bounding_box[1].x; ++x){
 						if(Mesh::isPixelInTriangle(v0.position, v1.position, v2.position, parallelogram_area, glm::vec2(x, y),uv,z))
 						{
-							if (z < zbuffer[x + y*HEIGHT]) {
+							if (z < zbuffer[x + y*HEIGHT]&& z < CAM_NEAR_PLANE) {
 								zbuffer[x + y*HEIGHT] = z;
-								pixel_color = (*mesh)->material.ambient_color;
+								pixel_color = 0.9f*(*mesh)->material.diffuse_color+AMBIENT_LIGHT*(*mesh)->material.ambient_color;
 
-								//
-								// Calculate shading and texturing
-								// calcFragmentProperties
-								glm::vec3 N; glm::vec2 tex_coords;
-								Mesh::calcFragmentProperties(v0, v1, v2, uv, OUT N, OUT tex_coords);
 								if (!(*mesh)->textures.empty()) {
+									// Calculate shading and texturing
+									// calcFragmentProperties
+									glm::vec3 N; glm::vec2 tex_coords;
+									Mesh::calcFragmentProperties(v0, v1, v2, uv, OUT N, OUT tex_coords);
 									Mesh::Texture texture;
 									for (auto tex_itr = (*mesh)->textures.begin(); tex_itr != (*mesh)->textures.end();++tex_itr) {
 										if ((*tex_itr).type == "texture_diffuse") {
 											texture = (*tex_itr);
 										}
 									}
-									int tex_width = texture.width;
-									int tex_height = texture.height;
-									int texel_index = 3 * (int)(tex_coords.x + tex_width * tex_coords.y);
-									if (texel_index < (tex_width - 1)*(tex_height - 1)-2) {
+									//int tex_width = texture.width;
+									//int tex_height = texture.height;
+									int texel_index = 3 * (int)(tex_coords.x + texture.width * tex_coords.y);
+									if (texel_index < (texture.width - 1)*(texture.height - 1)-2) {
 										unsigned char r = texture.data[0 + texel_index];
 										unsigned char g = texture.data[1 + texel_index];
 										unsigned char b = texture.data[2 + texel_index];

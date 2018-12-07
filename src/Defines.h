@@ -23,5 +23,6 @@
 #define PROFILE
 #define OUT
 
+#define AMBIENT_LIGHT 0.075f
 #define BACKFACE_CULLING
 #define SMOOTH_SHADING
