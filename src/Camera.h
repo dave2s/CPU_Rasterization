@@ -22,7 +22,7 @@ public:
 	~Camera();
 
 	glm::mat4 view_matrix;
-	glm::vec3 camera_position;
+	glm::vec3 position;
 	glm::mat4 projection_matrix;
 	float aspect_ratio;
 	float fovy;

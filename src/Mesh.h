@@ -69,9 +69,11 @@ public:
 
 	static float stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y);
 
-	static void calcFragmentProperties(Vertex & v0, Vertex & v1, Vertex & v2, glm::vec2 &uv, glm::vec3 &N, glm::vec2 &texture_coords);
+	static void calcFragmentProperties(Vertex & v0, Vertex & v1, Vertex & v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, int& texture_height, int& texture_width, glm::vec3 &N, glm::vec2 &texture_coords);
 
-	static bool isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, glm::vec2 &uv ,float &z);
+	static void calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, glm::vec3 &N);
+
+	static bool isPixelInTriangle(std::vector<float> tuv,glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
 
 	~Mesh();
 

@@ -1,5 +1,6 @@
 #include "Mesh.h"
 #include <algorithm>
+#include <iostream>
 //#include "Camera.h"
 
 Mesh::Mesh()
@@ -98,60 +99,69 @@ float Mesh::stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step
 	return prev_edge + edge_step_y + edge_step_x;
 }
 
-void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec2 &uv, glm::vec3 &N, glm::vec2 &texture_coords) {
+void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, int& texture_height, int& texture_width, glm::vec3 &N, glm::vec2 &texture_coords) {
 #ifndef SMOOTH_SHADING
-	glm::f32vec3 N = calcTriangleNormal(v0.position, v1.position, v2.position);
+    N = calcTriangleNormal(v0cam,v1cam,v2cam);
 #else
 	//Interpolate vertex normals using barycentric coordinates.
-	N =glm::normalize( (1-uv.x-uv.y)*v0.normal + uv.x*v1.normal + uv.y*v2.normal );
+	//Perspective correction: divide by respective v.z then multiply by fragment.z
+	N = glm::normalize(fragment_depth*( (1-uv.x-uv.y)*v0.normal/v0.position.z + uv.x*v1.normal/v1.position.z + uv.y*v2.normal/v2.position.z));
 #endif
-	texture_coords = ((1 - uv.x - uv.y)*v0.tex_coords + uv.x*v1.tex_coords + uv.y*v2.tex_coords);
+	///Textures
+	//interpolation with perspective correction (divide by respective vertex depth in camera space, then multiply by fragment depth)
+	texture_coords.x = fragment_depth*((1 - uv.x - uv.y)*v0.tex_coords.x/v0.position.z + uv.x*v1.tex_coords.x/v1.position.z + uv.y*v2.tex_coords.x/v2.position.z);
+	texture_coords.y = fragment_depth*((1 - uv.x - uv.y)*v0.tex_coords.y/v0.position.z + uv.x*v1.tex_coords.y/v1.position.z + uv.y*v2.tex_coords.y/v2.position.z);
+#ifdef TEXTURE_REPEAT
+	//lets repeat the texture :) /// if 1, rets 0, is ok?
+	if (texture_coords.x < 0)
+		texture_coords.x = 1 + texture_coords.x - (int)texture_coords.x;
+	else
+		texture_coords.x = texture_coords.x - (int)texture_coords.x;
+	if(texture_coords.y < 0)
+		texture_coords.y = 1 + texture_coords.y - (int)texture_coords.y;
+	else
+		texture_coords.y = texture_coords.y - (int)texture_coords.y;
+
+#else
+	texture_coords = glm::clamp(texture_coords,0.f,1.f);
+#endif
+	///Let's expand the coords from (0,1) to (0,texture_size);
+	texture_coords.x = texture_coords.x*texture_width;
+	texture_coords.y = texture_coords.y*texture_height;
 }
 
-bool Mesh::isPixelInTriangle(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,float &parallelogram_area, glm::vec2 pixel, glm::vec2 &uv, float &z) {
+void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, glm::vec3 &N) {
 #ifndef SMOOTH_SHADING
-	glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
+	N = calcTriangleNormal(v0cam, v1cam, v2cam);
 #else
-	//For backface culling we use NOT interpolated normal which is same for the whole triangle
-	glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
+	//Interpolate vertex normals using barycentric coordinates.
+	//Perspective correction: divide by respective v.z then multiply by fragment.z
+	N.x = (fragment_depth*((1 - uv.x - uv.y)*v0.normal.x / v0.position.z + uv.x*v1.normal.x / v1.position.z + uv.y*v2.normal.x / v2.position.z));
+	N.y = (fragment_depth*((1 - uv.x - uv.y)*v0.normal.y / v0.position.z + uv.x*v1.normal.y / v1.position.z + uv.y*v2.normal.y / v2.position.z));
+	N.z = (fragment_depth*((1 - uv.x - uv.y)*v0.normal.z / v0.position.z + uv.x*v1.normal.z / v1.position.z + uv.y*v2.normal.z / v2.position.z));
 #endif
-#ifdef BACKFACE_CULLING
-	if (glm::dot(N, (glm::vec3(pixel, -inf) - glm::vec3(0))) < 0) {
-		return false;
-	}
-#endif
-	//expecting counter clockwise triangle indices
-	///TODO edge overlap - convention is that left or topleft edge is priority...overlap occures when edge function returns 0, so if edgeFun()
-	float t, u, v;
-	t = edgeFunction(v1, v2, pixel); //rozdil obdelniku, mozno nahlizet jako na kartezsky soucin ve 2d
-	u = edgeFunction(v2, v0, pixel); //nebo taky determinant matice kde na prvnim radku je deltax a deltay
-	v = edgeFunction(v0, v1, pixel); //pixelu s v0 a na druhem deltax a deltay vrcholu v0 v1.
-	
-	if (u < 0 || v < 0 || t < 0) return false;
+}
+
+
+bool Mesh::isPixelInTriangle(std::vector<float> tuv, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
+
+	if (tuv[0] < 0 || tuv[1] < 0 || tuv[2] < 0) return false;
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
-	if (t == 0) {
+	if (tuv[0] == 0) {
 		glm::vec2 edge1 = glm::vec2(v2 - v1);
 		if (edge1.y <= 0 || (edge1.y == 0 && edge1.x <= 0));
 		return false;
 	}
-	if (u == 0) {
+	if (tuv[1] == 0) {
 		glm::vec2 edge2 = glm::vec2(v0 - v2);
 		if (edge2.y <= 0 || (edge2.y == 0 && edge2.x <= 0));
 		return false;
 	}
-	if (v == 0) {
+	if (tuv[2] == 0) {
 		glm::vec2 edge0 = glm::vec2(v1 - v0);
 		if (edge0.y <= 0 || (edge0.y == 0 && edge0.x <= 0));
 		return false;
 	}
-	//barycentric coordss
-	t /= parallelogram_area;
-	uv.x = u/parallelogram_area;
-	uv.y = v/parallelogram_area;
-
-	//pixel depth in camera space
-	z = 1/(t/v0.z + uv.x/v1.z + uv.y/v2.z);
-
 	return true;
 }
 /*
