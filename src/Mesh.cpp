@@ -105,7 +105,10 @@ void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 
 #else
 	//Interpolate vertex normals using barycentric coordinates.
 	//Perspective correction: divide by respective v.z then multiply by fragment.z
-	N = glm::normalize(fragment_depth*( (1-uv.x-uv.y)*v0.normal/v0.position.z + uv.x*v1.normal/v1.position.z + uv.y*v2.normal/v2.position.z));
+	N.x = (fragment_depth*((1 - uv.x - uv.y)*v0.normal.x / v0.position.z + uv.x*v1.normal.x / v1.position.z + uv.y*v2.normal.x / v2.position.z));
+	N.y = (fragment_depth*((1 - uv.x - uv.y)*v0.normal.y / v0.position.z + uv.x*v1.normal.y / v1.position.z + uv.y*v2.normal.y / v2.position.z));
+	N.z = (fragment_depth*((1 - uv.x - uv.y)*v0.normal.z / v0.position.z + uv.x*v1.normal.z / v1.position.z + uv.y*v2.normal.z / v2.position.z));
+	N = glm::normalize(N);
 #endif
 	///Textures
 	//interpolation with perspective correction (divide by respective vertex depth in camera space, then multiply by fragment depth)
@@ -124,6 +127,7 @@ void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 
 
 #else
 	texture_coords = glm::clamp(texture_coords,0.f,1.f);
+	//texture_coords.y = 1 - texture_coords.y;
 #endif
 	///Let's expand the coords from (0,1) to (0,texture_size);
 	texture_coords.x = texture_coords.x*texture_width;

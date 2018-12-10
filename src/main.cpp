@@ -41,16 +41,16 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 	if (event.type == SDL_KEYDOWN) {
 		switch (event.key.keysym.sym) {
 		case SDLK_w:
-			camera.position[2] -= 0.1f;
+			camera.position[2] -= 0.5f;
 			break;
 		case SDLK_s:
-			camera.position[2] += 0.1f;
+			camera.position[2] += 0.5f;
 			break;
 		case SDLK_a:
-			camera.position[0] -= 0.1f;
+			camera.position[0] -= 0.5f;
 			break;
 		case SDLK_d:
-			camera.position[0] += 0.1f;
+			camera.position[0] += 0.5f;
 			break;
 		case SDLK_LEFT:
 			//if (!light_list.empty())
@@ -69,13 +69,13 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			//	((RT_PointLight*)light_list.at(0))->position[1] -= 1.0f;
 			break;
 		case SDLK_c:
-			camera.position[1] -= 0.1f;
+			camera.position[1] -= 0.5f;
 			break;
 		case SDLK_r:
 			camera.position = { 0.f ,0.f,0.0f };
 			break;
 		case SDLK_SPACE:
-			camera.position[1] += 0.1f;
+			camera.position[1] += 0.5f;
 			break;
 		case SDLK_l:
 			//((RT_PointLight*)light_list.at(0))->position = glm::vec3(0.f, 0.f, 0.f);
@@ -242,13 +242,13 @@ int main(int argc, char* argv[]) {
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
 	
-	Camera camera = Camera(glm::vec3(0.f, 1.f, 3.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
+	Camera camera = Camera(glm::vec3(0.f, 1.f, 6.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
 	//std::string model_path = "example/sponza/sponza.obj";
-	std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
-	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
+	//std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
+	std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
 	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 //	std::string model_path = "/home/kamil/CPU_Rasterization/example/CornellBox-Original.obj";
@@ -269,6 +269,19 @@ int main(int argc, char* argv[]) {
 			MovePolling(event, camera);
 		}
 		for (auto mesh = mesh_list.begin(); mesh != mesh_list.end(); ++mesh) {
+			/*Mesh::Texture texture = (*mesh)->textures[0];
+			for (int y = 0; y <= texture.height;++y) {
+				for (int x = 0;x <= texture.width; ++x) {
+					uint32_t texel_index = 3*(x+y*texture.width);
+					glm::u8vec3 rgb = glm::u8vec3(	texture.data[0 + texel_index],
+													texture.data[1 + texel_index],
+													texture.data[2 + texel_index]
+					);
+					glm::f32vec3 pixel_color = (U8vec2F32vec(rgb));
+					setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+				}
+			}
+			break;*/
 
 			triangle_count = (*mesh)->getTriangleCount();
 			for (uint32_t i = 0; i < triangle_count; ++i) {
@@ -302,7 +315,6 @@ int main(int argc, char* argv[]) {
 					continue;
 				}
 #endif
-
 				glm::uvec2 bounding_box[2];
 				Mesh::computeTriangleBoundingBox(bounding_box,v0.position, v1.position, v2.position);
 
@@ -376,8 +388,8 @@ int main(int argc, char* argv[]) {
 									}
 									Mesh::calcFragmentProperties(v0, v1, v2,v0cam,v1cam,v2cam, uv,z, texture.height, texture.width, OUT N, OUT tex_coords);
 
-									float fragment_x = (v0.position.x / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y;
-									float fragment_y = (v0.position.y / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.y / -v1.position.z) * uv.x + (v2.position.y / -v2.position.z) * uv.y;
+									float fragment_x = z * ((v0.position.x / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y);
+									float fragment_y = z * ((v0.position.y / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.y / -v1.position.z) * uv.x + (v2.position.y / -v2.position.z) * uv.y);
 
 									glm::vec3 fragment_camera_space_position = glm::vec3(fragment_x, fragment_y,-z);
 									glm::vec3 view_direction = glm::normalize(-fragment_camera_space_position);
@@ -385,7 +397,7 @@ int main(int argc, char* argv[]) {
 									float angle_of_incidence = std::max(0.f, glm::dot(N,view_direction));
 
 									//clamp texture coords..cant just subtract 1 because coords can be less than 1 and the result would be negative
-									unsigned int texel_index = 3*(glm::clamp(tex_coords.x,0.f,(float)tex_coords.x-1) + texture.width * glm::clamp(tex_coords.y,0.f,(float)texture.height-1));
+									uint32_t texel_index = 3*((int)tex_coords.x + texture.width*(int)tex_coords.y);
 									//if (texel_index <= 3*((texture.width)*(texture.height))) {
 										//const int M = 10;
 										// checkerboard pattern
@@ -396,6 +408,7 @@ int main(int argc, char* argv[]) {
 																		texture.data[2 + texel_index]
 										);
 										pixel_color = glm::clamp(angle_of_incidence*(U8vec2F32vec(rgb)) + AMBIENT_LIGHT*(U8vec2F32vec(rgb)),0.f,1.f);
+										//glm::f32vec3 pixel_color = (U8vec2F32vec(rgb));
 										setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
 									/*}
 									else {
@@ -405,8 +418,8 @@ int main(int argc, char* argv[]) {
 								else {
 									Mesh::calcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, OUT N);
 									//interpolate point in camera space
-									float fragment_x = (v0.position.x / -v0.position.z) * (1 - uv.x - uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y;
-									float fragment_y = (v0.position.y / -v0.position.z) * (1 - uv.x - uv.y) + (v1.position.y / -v1.position.z) * uv.x + (v2.position.y / -v2.position.z) * uv.y;
+									float fragment_x = z*((v0.position.x / -v0.position.z) * (1 - uv.x - uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y);
+									float fragment_y = z*((v0.position.y / -v0.position.z) * (1 - uv.x - uv.y) + (v1.position.y / -v1.position.z) * uv.x + (v2.position.y / -v2.position.z) * uv.y);
 
 									glm::vec3 fragment_camera_space_position = glm::vec3(fragment_x, fragment_y, -z);
 									glm::vec3 view_direction = glm::normalize(-fragment_camera_space_position);

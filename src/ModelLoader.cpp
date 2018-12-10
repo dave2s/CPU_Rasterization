@@ -142,7 +142,7 @@ std::vector<Mesh::Texture> ModelLoader::loadTextures(aiMaterial *mtl, aiTextureT
 
 uint32_t ModelLoader::loadTextureFile(unsigned char** img_data,const char *path, std::string &dir, int& width, int& height, int& channels) {
 	//img_data = ???;
-	
+	stbi_set_flip_vertically_on_load(true);
 	*img_data = stbi_load((dir+'/'+std::string(path)).c_str(),&width,&height,&channels,3);
 	if (img_data) {
 		if (channels != 3){
