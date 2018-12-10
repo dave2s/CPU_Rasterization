@@ -269,20 +269,6 @@ int main(int argc, char* argv[]) {
 			MovePolling(event, camera);
 		}
 		for (auto mesh = mesh_list.begin(); mesh != mesh_list.end(); ++mesh) {
-			/*Mesh::Texture texture = (*mesh)->textures[0];
-			for (int y = 0; y <= texture.height;++y) {
-				for (int x = 0;x <= texture.width; ++x) {
-					uint32_t texel_index = 3*(x+y*texture.width);
-					glm::u8vec3 rgb = glm::u8vec3(	texture.data[0 + texel_index],
-													texture.data[1 + texel_index],
-													texture.data[2 + texel_index]
-					);
-					glm::f32vec3 pixel_color = (U8vec2F32vec(rgb));
-					setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
-				}
-			}
-			break;*/
-
 			triangle_count = (*mesh)->getTriangleCount();
 			for (uint32_t i = 0; i < triangle_count; ++i) {
 				Mesh::Vertex* triangle = (*mesh)->getTriangle(i);
@@ -317,18 +303,8 @@ int main(int argc, char* argv[]) {
 #endif
 				glm::uvec2 bounding_box[2];
 				Mesh::computeTriangleBoundingBox(bounding_box,v0.position, v1.position, v2.position);
-
-				glm::vec2 uv;
 				
 				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
-				/*
-				float edge0; float edge_y_step; float edge_x_step;
-				edge0 = Mesh::edgeFunction(v0, v1, glm::vec2(0, 0));
-				edge_y_step = (v1.x-v0.x);
-				edge_x_step = (v1.y-v0.y);
-*/
-				glm::f32vec3 pixel_color;
-
 				//2*triangle area - to normalize barycentric later
 				float parallelogram_area = Mesh::edgeFunction(v0.position, v1.position, v2.position);
 
@@ -349,7 +325,12 @@ int main(int argc, char* argv[]) {
 				edges_x.push_back(v2.position.x - v0.position.x);
 				edges_x.push_back(v0.position.x - v1.position.x);
 
+				//barycentric coords (not normalized, for pixel overlap test)
 				std::vector<float> tuv(3);
+				//2. and 3. barycentric coord (normalized, for interpolation of vertex attributes)
+				glm::vec2 uv;
+				//pixel color sent to buffer
+				glm::f32vec3 pixel_color;
 				///PIXEL LOOP y, main scan-line loop
 				for (uint16_t y = bounding_box[0].y; y <= bounding_box[1].y; ++y)
 				{
@@ -399,17 +380,16 @@ int main(int argc, char* argv[]) {
 									//clamp texture coords..cant just subtract 1 because coords can be less than 1 and the result would be negative
 									uint32_t texel_index = 3*((int)tex_coords.x + texture.width*(int)tex_coords.y);
 									//if (texel_index <= 3*((texture.width)*(texture.height))) {
-										//const int M = 10;
-										// checkerboard pattern
-										//float p = (fmod(tex_coords.x * M, 1.0) > 0.5) ^ (fmod(tex_coords.y * M, 1.0) < 0.5);
-
-										glm::u8vec3 rgb = glm::u8vec3(	texture.data[0 + texel_index],
-																		texture.data[1 + texel_index],
-																		texture.data[2 + texel_index]
-										);
-										pixel_color = glm::clamp(angle_of_incidence*(U8vec2F32vec(rgb)) + AMBIENT_LIGHT*(U8vec2F32vec(rgb)),0.f,1.f);
-										//glm::f32vec3 pixel_color = (U8vec2F32vec(rgb));
-										setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+									glm::u8vec3 rgb = glm::u8vec3(	texture.data[0 + texel_index],
+																	texture.data[1 + texel_index],
+																	texture.data[2 + texel_index]
+									);
+									//  Let the final color be C = I_view*M + I_ambient*M, where 
+									//	Lview is view (cosine) angle attenuation intensity and 
+									//	Lambient is ambient light intensity
+									//	M is material color
+									pixel_color = glm::clamp(angle_of_incidence*(U8vec2F32vec(rgb)) + AMBIENT_LIGHT*(U8vec2F32vec(rgb)),0.f,1.f);
+									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
 									/*}
 									else {
 										setRGBAPixel(x, y, frame_buffer, glm::u8vec3(180,120,180));
