@@ -210,17 +210,17 @@ bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam) {
 	return false;
 }
 
-bool backfaceCulling(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2,glm::vec2 pixel) {
+bool backfaceCulling(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
 #ifndef SMOOTH_SHADING
 	glm::f32vec3 N = calcTriangleUnNormal(v0, v1, v2);
 #else
 	//For backface culling we use NOT interpolated normal which is same for the whole triangle
 	glm::f32vec3 N = Mesh::calcTriangleUnNormal(v0, v1, v2);
 #endif
-	if (glm::dot(N, (glm::vec3(pixel, -inf) - glm::vec3(0))) < 0) {
-		return false;
+	if (glm::dot(N, (glm::vec3(v0) - glm::vec3(0))) > 0) {
+		return true;
 	}
-	return true;
+	return false;
 }
 
 
@@ -297,14 +297,14 @@ int main(int argc, char* argv[]) {
 				///very naive and not robust
 				if (frustumCulling(v0.position, v1.position, v2.position,camera)) continue;
 
-				glm::uvec2 bounding_box[2];
-				Mesh::computeTriangleBoundingBox(bounding_box,v0.position, v1.position, v2.position);
-
 #ifdef BACKFACE_CULLING
-				if (backfaceCulling(v0cam, v1cam, v2cam, glm::vec2(bounding_box[0].x + 0.5, bounding_box[0].y + 0.5))) {
+				if (backfaceCulling(v0cam, v1cam, v2cam)) {
 					continue;
 				}
 #endif
+
+				glm::uvec2 bounding_box[2];
+				Mesh::computeTriangleBoundingBox(bounding_box,v0.position, v1.position, v2.position);
 
 				glm::vec2 uv;
 				
@@ -329,23 +329,24 @@ int main(int argc, char* argv[]) {
 				tuv_row.push_back(Mesh::edgeFunction(v0.position,v1.position,pixel));
 				//precompute edge deltas for y and x (zmena x a y mezi vrcholy)
 				std::vector<float> edges_y; std::vector<float> edges_x;
-				edges_y.push_back(v1.position.y - v2.position.y);
-				edges_y.push_back(v2.position.y - v0.position.y);
-				edges_y.push_back(v0.position.y - v1.position.y);
+				edges_y.push_back(v2.position.y - v1.position.y);
+				edges_y.push_back(v0.position.y - v2.position.y);
+				edges_y.push_back(v1.position.y - v0.position.y);
 
-				edges_x.push_back(v2.position.x - v1.position.x);
-				edges_x.push_back(v0.position.x - v2.position.x);
-				edges_x.push_back(v1.position.x - v0.position.x);
+				edges_x.push_back(v1.position.x - v2.position.x);
+				edges_x.push_back(v2.position.x - v0.position.x);
+				edges_x.push_back(v0.position.x - v1.position.x);
 
+				std::vector<float> tuv(3);
 				///PIXEL LOOP y, main scan-line loop
 				for (uint16_t y = bounding_box[0].y; y <= bounding_box[1].y; ++y)
 				{
 					OUT float z; 
 					//unnormalized barycentric
-					std::vector<float> tuv;
-					tuv.push_back(tuv_row[0]);
-					tuv.push_back(tuv_row[1]);
-					tuv.push_back(tuv_row[2]);
+					
+					tuv[0]=tuv_row[0];
+					tuv[1]=tuv_row[1];
+					tuv[2]=tuv_row[2];
 
 					///PIXEL LOOP x
 					for(uint16_t x = bounding_box[0].x;x <= bounding_box[1].x; ++x)
@@ -359,7 +360,7 @@ int main(int argc, char* argv[]) {
 							//pixel depth in camera space
 							z = 1 / (((1-uv.x-uv.y) / parallelogram_area) / v0.position.z + uv.x / v1.position.z + uv.y / v2.position.z);
 
-							if (z < zbuffer[x + y*HEIGHT] /*&& z > (-camera.position.z + CAM_NEAR_PLANE)*/) {
+							if (z < zbuffer[x + y*HEIGHT] /*&& z > (CAM_NEAR_PLANE)*/) {
 								zbuffer[x + y*HEIGHT] = z;
 								pixel_color = 0.9f*(*mesh)->material.diffuse_color+AMBIENT_LIGHT*(*mesh)->material.ambient_color;
 								glm::vec3 N;
