@@ -204,8 +204,8 @@ bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam) {
 	if (v0.y < 0 && v1.y < 0 && v2.y < 0) return true;
 	if (v0.y > HEIGHT && v1.y > HEIGHT && v2.y > HEIGHT) return true;
 	//near and far
-	if (v0.z < (-cam.position.z+CAM_NEAR_PLANE) && v1.z < (-cam.position.z + CAM_NEAR_PLANE) && v2.z < (-cam.position.z + CAM_NEAR_PLANE)) return true;
-	if (v0.z > (-cam.position.z+CAM_FAR_PLANE) && v1.z > (-cam.position.z + CAM_FAR_PLANE ) && v2.z > (-cam.position.z + CAM_FAR_PLANE)) return true;
+	if (v0.z < (CAM_NEAR_PLANE) && v1.z < (CAM_NEAR_PLANE) && v2.z < (CAM_NEAR_PLANE)) return true;
+	if (v0.z > (CAM_FAR_PLANE) && v1.z > (CAM_FAR_PLANE) && v2.z > (CAM_FAR_PLANE)) return true;
 
 	return false;
 }
@@ -263,7 +263,7 @@ int main(int argc, char* argv[]) {
 #ifdef PROFILE
 		auto start = std::chrono::high_resolution_clock::now();
 #endif
-		resetZBuffer(OUT zbuffer,camera.position.z+CAM_FAR_PLANE);
+		resetZBuffer(OUT zbuffer,CAM_FAR_PLANE);
 		clearFrameBuffer(frame_buffer);
 		while (SDL_PollEvent(&event)) {
 			MovePolling(event, camera);
@@ -291,7 +291,7 @@ int main(int argc, char* argv[]) {
 				perspectiveDivide(OUT v0.position, OUT v1.position, OUT v2.position);
 
 				//convertToNDC(OUT v0, OUT v1, OUT v2, camera);
-				convertToRasterSpace(OUT v0.position, OUT v1.position, OUT v2.position,camera);
+				convertToRasterSpace(OUT v0.position, OUT v1.position, OUT v2.position, camera);
 				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost)slo priradit vrcholy pixelum
 
 				///very naive and not robust
@@ -358,9 +358,9 @@ int main(int argc, char* argv[]) {
 							uv.x = tuv[1] / parallelogram_area;
 							uv.y = tuv[2] / parallelogram_area;
 							//pixel depth in camera space
-							z = 1 / (((1-uv.x-uv.y) / parallelogram_area) / v0.position.z + uv.x / v1.position.z + uv.y / v2.position.z);
+							z = 1 / ((1-uv.x-uv.y)/ v0.position.z + uv.x / v1.position.z + uv.y / v2.position.z);
 
-							if (z < zbuffer[x + y*HEIGHT] /*&& z > (CAM_NEAR_PLANE)*/) {
+							if (z < zbuffer[x + y*HEIGHT] /* && z > (CAM_NEAR_PLANE)*/) {
 								zbuffer[x + y*HEIGHT] = z;
 								pixel_color = 0.9f*(*mesh)->material.diffuse_color+AMBIENT_LIGHT*(*mesh)->material.ambient_color;
 								glm::vec3 N;
