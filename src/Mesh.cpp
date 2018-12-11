@@ -65,10 +65,6 @@ float Mesh::edgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 c) {
 	return (v1.y - v0.y)*(c.x - v0.x)-(v1.x - v0.x)*(c.y - v0.y);
 }
 
-float Mesh::stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y) {
-	return prev_edge + edge_step_y + edge_step_x;
-}
-
 void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, int& texture_height, int& texture_width, glm::vec3 &N, glm::vec2 &texture_coords) {
 #ifndef SMOOTH_SHADING
     N = calcTriangleNormal(v0cam,v1cam,v2cam);
@@ -118,7 +114,6 @@ void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 
 
 
 bool Mesh::isPixelInTriangle(std::vector<float> tuv, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
-
 	if (tuv[0] < 0 || tuv[1] < 0 || tuv[2] < 0) return false;
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
 	if (tuv[0] == 0) {

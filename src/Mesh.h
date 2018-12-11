@@ -42,8 +42,8 @@ public:
 
 	//glm::vec2 boundary_points[2] = { glm::vec2(inf), glm::vec2(-inf) };
 
-	bool isSingleSided() { return single_sided; };
-	int getTriangleCount() { return indices_len / 3; }
+	bool isSingleSided() { return single_sided; }
+	uint32_t getTriangleCount() { return indices_len/3; }
 
 	//Return triangle by index of the triangle
 	Vertex* getTriangle(unsigned int idx) {
@@ -67,8 +67,6 @@ public:
 
 	static float edgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 pixel);
 
-	static float stepEdgeFunction(float prev_edge, float edge_step_x, float edge_step_y);
-
 	static void calcFragmentProperties(Vertex & v0, Vertex & v1, Vertex & v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, int& texture_height, int& texture_width, glm::vec3 &N, glm::vec2 &texture_coords);
 
 	static void calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, glm::vec3 &N);
@@ -80,8 +78,8 @@ public:
 private:
 	std::vector<unsigned int> indices;
 	std::vector<Vertex> vertices;
-	uint16_t vertex_count;
-	uint16_t indices_len;
+	uint32_t vertex_count;
+	uint32_t indices_len;
 	bool single_sided;
 };
 

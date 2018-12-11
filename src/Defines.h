@@ -23,6 +23,8 @@
 #define PROFILE
 #define OUT
 
+//Optimization of drawing - go only trough pixels sorounding the triangle
+#define BOUNDING_BOX
 //material color minimal intensity - always at least this visible
 #define AMBIENT_LIGHT 0.175f
 //discard triangles facing away from the camera
