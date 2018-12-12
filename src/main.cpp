@@ -53,18 +53,26 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			camera.position[0] += 0.2f;
 			break;
 		case SDLK_LEFT:
+			camera.yaw += TO_RADIANS(15);
+			if (camera.yaw > TO_RADIANS(180)) camera.yaw = TO_RADIANS(180);
 			//if (!light_list.empty())
 				//((RT_PointLight*)light_list.at(0))->position[0] -= 1.0f;
 			break;
 		case SDLK_RIGHT:
+			camera.yaw -= TO_RADIANS(15);
+			if (camera.yaw < TO_RADIANS(0)) camera.yaw = TO_RADIANS(0);
 			//if (!light_list.empty())
 				//((RT_PointLight*)light_list.at(0))->position[0] += 1.0f;
 			break;
 		case SDLK_UP:
+			camera.pitch += TO_RADIANS(15);
+			if (camera.pitch > TO_RADIANS(90)) camera.pitch = TO_RADIANS(90);
 			//if (!light_list.empty())
 				//((RT_PointLight*)light_list.at(0))->position[1] += 1.0f;
 			break;
 		case SDLK_DOWN:
+			camera.pitch -= TO_RADIANS(15);
+			if (camera.pitch < TO_RADIANS(-90)) camera.pitch = TO_RADIANS(-90);
 			//if (!light_list.empty())
 			//	((RT_PointLight*)light_list.at(0))->position[1] -= 1.0f;
 			break;
@@ -72,7 +80,9 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			camera.position[1] -= 0.2f;
 			break;
 		case SDLK_r:
-			camera.position = { 0.f ,0.f,0.0f };
+			camera.position = { 0.f ,1.f, 6.f };
+			camera.pitch = TO_RADIANS(0.f);
+			camera.yaw = TO_RADIANS(90.f);
 			break;
 		case SDLK_SPACE:
 			camera.position[1] += 0.2f;
@@ -241,8 +251,8 @@ int main(int argc, char* argv[]) {
 	renderer = SDL_CreateRenderer(main_window, -1, 0);
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
-	
-	Camera camera = Camera(glm::vec3(0.f, 0.f, 3.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
+
+	Camera camera = Camera(glm::vec3(0.f, 1.f, 6.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
 
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);

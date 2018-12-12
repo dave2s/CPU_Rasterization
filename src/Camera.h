@@ -27,6 +27,8 @@ public:
 	float aspect_ratio;
 	float fovy;
 	float scale;
+	float pitch;
+	float yaw;
 
 	void Update(glm::vec3 direction);
 	/*float near_plane = NEAR_PLANE;
