@@ -27,10 +27,25 @@ public:
 	void ChangeRotation(float pitch, float yaw);
 	void Reset();
 
-	float& GetAspectRatio();
-	float& GetScale();
-	glm::mat4& GetViewMatrix();
-	glm::vec3& GetPosition();
+	inline float& GetAspectRatio()
+	{
+		return m_AspectRatio;
+	}
+
+	inline float& GetScale()
+	{
+		return m_Scale;
+	}
+
+	inline glm::mat4& GetViewMatrix()
+	{
+		return m_ViewMatrix;
+	}
+
+	inline glm::vec3& GetPosition()
+	{
+		return m_Position;
+	}
 
 private:
 	void Update();

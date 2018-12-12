@@ -51,26 +51,6 @@ void Camera::Reset()
 	Update();
 }
 
-float& Camera::GetAspectRatio()
-{
-	return m_AspectRatio;
-}
-
-float& Camera::GetScale()
-{
-	return m_Scale;
-}
-
-glm::mat4& Camera::GetViewMatrix()
-{
-	return m_ViewMatrix;
-}
-
-glm::vec3& Camera::GetPosition()
-{
-	return m_Position;
-}
-
 void Camera::Update() {
 #ifdef DEBUG
 	std::cout << glm::to_string(m_Position) << std::endl;
