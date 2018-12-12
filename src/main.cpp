@@ -95,10 +95,6 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 		case SDLK_SPACE:
 			camera.position[1] += 0.2f;
 			break;
-		case SDLK_l:
-			//((RT_PointLight*)light_list.at(0))->position = glm::vec3(0.f, 0.f, 0.f);
-			//light_list[1]->position = calcRandPos(LO0x, LO0y, LO0z, HI0x, HI0y, HI0z);
-			break;
 		case SDLK_g:
 		/*	if (global_light_on) {
 				for (auto light = light_list.begin(); light != light_list.end();) {
