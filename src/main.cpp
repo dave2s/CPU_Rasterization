@@ -191,7 +191,7 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 	v2.z *= -1.f;
 }
 //(-1,1)
-void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam)
+/*void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam)
 {
 	v0.x = 2 * v0.x / 0.5 - 0.5 / 1.f;
 	v0.y = 2 * v0.y / 0.5;
@@ -201,7 +201,7 @@ void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam)
 
 	v2.x = 2 * v2.x / 0.5 - 0.5 / 13.f;
 	v2.y = 2 * v2.y / 0.5;
-}
+}*/
 //(0 < v.x < width);(height > v.y > 0)
 void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam) {
 	v0.x = (((v0.x / (cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
@@ -269,18 +269,18 @@ int main(int argc, char* argv[]) {
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
 
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
-	CreatePointLight(glm::vec3(0.f, 0.f, 0.f), 100.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
-	CreatePointLight(glm::vec3(0.f, 0.f, 0.f), 100.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
+	CreatePointLight(glm::vec3(0.f, 1.f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
+	CreatePointLight(glm::vec3(0.f, 1.f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
 	CreateGlobalLight(glm::vec3(0.f, 0.f, -1.f), global_light_intensity, glm::f32vec3(U2F(255), U2F(255), U2F(255)));
 
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
 	//std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
-	std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
+	//std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
 	//std::string model_path = std::string(current_dir).append("/example/bunny/bunny.obj");
 	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
-	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
+	std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 
 	ModelLoader::loadScene(model_path, mesh_list/*, loaded_textures*/);
 
@@ -314,11 +314,11 @@ int main(int argc, char* argv[]) {
 				v1.position = (camera.view_matrix) * glm::vec4(v1.position, 1.f);
 				v2.position = (camera.view_matrix) * glm::vec4(v2.position, 1.f);
 
-				for (auto light = light_list.begin(); light != light_list.end(); ++light) {
+				/*for (auto light = light_list.begin(); light != light_list.end(); ++light) {
 					if ((*light)->getType() == Light::point) {
-						((PointLight*)(*light))->position = camera.view_matrix * glm::vec4(((PointLight*)(*light))->position, 1.f);
+						((PointLight*)(*light))->position = camera.view_matrix * (glm::vec4(((PointLight*)(*light))->position, -1.f));
 					}
-				}
+				}*/
 
 				glm::vec3 v0cam = v0.position;
 				glm::vec3 v1cam = v1.position;
