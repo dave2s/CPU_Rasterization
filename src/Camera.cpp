@@ -10,29 +10,70 @@
 
 #include <cmath>
 
-
-Camera::Camera(glm::vec3 origin, glm::vec3 front, float _fovy, float _aspect_ratio)
+Camera::Camera(glm::vec3 origin, float pitch, float yaw, float fovy, float aspectRatio)
+	: m_Position(origin),
+	  m_Origin(origin),
+	  m_PitchOrigin(TO_RADIANS(pitch)),
+	  m_YawOrigin(TO_RADIANS(yaw)),
+	  m_AspectRatio(aspectRatio),
+	  m_Scale(glm::tan(TO_RADIANS(fovy*0.5))),
+	  m_Pitch(TO_RADIANS(pitch)),
+	  m_Yaw(TO_RADIANS(yaw))
 {
-	aspect_ratio = _aspect_ratio;
-	position = origin;
-	view_matrix = glm::lookAt(position, position + front, glm::vec3(0.f, 1.f, 0.f));
-
-	//std::cout << "Aspect ratio:" << std::to_string(TO_RADIANS(fovy)) << std::endl;
-	//projection_matrix = glm::perspective(TO_RADIANS(fovy),_aspect_ratio,CAM_NEAR_PLANE, CAM_FAR_PLANE);
-	fovy = _fovy;
-	scale = glm::tan(TO_RADIANS(fovy*0.5));
-	yaw = TO_RADIANS(90.f);
-	pitch = TO_RADIANS(0.f);
-	Update(front);
+	Update();
 }
-void Camera::Update(glm::vec3 direction) {
+
+void Camera::ChangePosition(glm::vec3 difference)
+{
+	m_Position += difference;
+
+	Update();
+}
+
+void Camera::ChangeRotation(float pitch, float yaw)
+{
+	m_Pitch += TO_RADIANS(pitch);
+	m_Yaw += TO_RADIANS(yaw);
+
+
+	m_Pitch = glm::clamp(m_Pitch, m_PitchOrigin-DEG90, m_PitchOrigin+DEG90);
+	m_Yaw = glm::clamp(m_Yaw, m_YawOrigin-DEG90, m_YawOrigin+DEG90);
+
+	Update();
+}
+
+void Camera::Reset()
+{
+	m_Position = m_Origin;
+	m_Yaw = m_YawOrigin;
+	m_Pitch = m_PitchOrigin;
+
+	Update();
+}
+
+float& Camera::GetAspectRatio()
+{
+	return m_AspectRatio;
+}
+
+float& Camera::GetScale()
+{
+	return m_Scale;
+}
+
+glm::mat4& Camera::GetViewMatrix()
+{
+	return m_ViewMatrix;
+}
+
+glm::vec3& Camera::GetPosition()
+{
+	return m_Position;
+}
+
+void Camera::Update() {
 #ifdef DEBUG
-	std::cout << glm::to_string(camera_position) << std::endl;
+	std::cout << glm::to_string(m_Position) << std::endl;
 #endif
-	glm::vec3 rotation(cos(yaw), sin(pitch), 0);
-	view_matrix = glm::lookAt(position, position + direction + rotation, glm::vec3(0.f, 1.f, 0.f));
-}
-
-Camera::~Camera()
-{
+	m_ViewMatrix = glm::lookAt(m_Position, m_Position + glm::vec3(cos(m_Yaw), sin(m_Pitch), -1.f), glm::vec3(0.f, 1.f, 0.f));
 }

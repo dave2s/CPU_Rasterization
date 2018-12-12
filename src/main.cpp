@@ -41,32 +41,28 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 	if (event.type == SDL_KEYDOWN) {
 		switch (event.key.keysym.sym) {
 		case SDLK_w:
-			camera.position[2] -= 0.2f;
+			camera.ChangePosition(glm::vec3(0.f, 0.f, -MOVSTEP));
 			break;
 		case SDLK_s:
-			camera.position[2] += 0.2f;
+			camera.ChangePosition(glm::vec3(0.f, 0.f, MOVSTEP));
 			break;
 		case SDLK_a:
-			camera.position[0] -= 0.2f;
+			camera.ChangePosition(glm::vec3(-MOVSTEP, 0.f, 0.f));
 			break;
 		case SDLK_d:
-			camera.position[0] += 0.2f;
+			camera.ChangePosition(glm::vec3(MOVSTEP, 0.f, 0.f));
 			break;
 		case SDLK_j:
-			camera.yaw += TO_RADIANS(15);
-			if (camera.yaw > TO_RADIANS(180)) camera.yaw = TO_RADIANS(180);
+			camera.ChangeRotation(0, ROTSTEP);
 			break;
 		case SDLK_l:
-			camera.yaw -= TO_RADIANS(15);
-			if (camera.yaw < TO_RADIANS(0)) camera.yaw = TO_RADIANS(0);
+			camera.ChangeRotation(0, -ROTSTEP);
 			break;
 		case SDLK_i:
-			camera.pitch += TO_RADIANS(15);
-			if (camera.pitch > TO_RADIANS(90)) camera.pitch = TO_RADIANS(90);
+			camera.ChangeRotation(ROTSTEP, 0);
 			break;
 		case SDLK_k:
-			camera.pitch -= TO_RADIANS(15);
-			if (camera.pitch < TO_RADIANS(-90)) camera.pitch = TO_RADIANS(-90);
+			camera.ChangeRotation(-ROTSTEP, 0);
 			break;
 		case SDLK_LEFT:
 			//if (!light_list.empty())
@@ -85,15 +81,13 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			//	((RT_PointLight*)light_list.at(0))->position[1] -= 1.0f;
 			break;
 		case SDLK_c:
-			camera.position[1] -= 0.2f;
+			camera.ChangePosition(glm::vec3(0.f, -MOVSTEP, 0.f));
 			break;
 		case SDLK_r:
-			camera.position = { 0.f ,1.f, 6.f };
-			camera.pitch = TO_RADIANS(0.f);
-			camera.yaw = TO_RADIANS(90.f);
+			camera.Reset();
 			break;
 		case SDLK_SPACE:
-			camera.position[1] += 0.2f;
+			camera.ChangePosition(glm::vec3(0.f, MOVSTEP, 0.f));
 			break;
 		case SDLK_g:
 		/*	if (global_light_on) {
@@ -118,7 +112,6 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			updateSkyColor();*/
 			break;
 		}
-		camera.Update(glm::vec3(0.f, 0.f, -1.f));
 
 		//return;
 	}
@@ -179,6 +172,7 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 	v2.z *= -1.f;
 }
 //(-1,1)
+/*
 void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam)
 {
 	v0.x =2*v0.x/0.5 -0.5 / 1.f;
@@ -189,17 +183,17 @@ void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam)
 
 	v2.x = 2*v2.x/0.5 - 0.5 / 13.f;
 	v2.y = 2*v2.y/0.5;
-}
+}*/
 //(0 < v.x < width);(height > v.y > 0)
-void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam) {
-	v0.x = (((v0.x/(cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v0.y = (((1 - v0.y/cam.scale) / 2)* HEIGHT);// / cam.scale;
+void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
+	v0.x = (((v0.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v0.y = (((1 - v0.y/camera.GetScale()) / 2)* HEIGHT);// / cam.scale;
 
-	v1.x = (((v1.x/(cam.aspect_ratio*cam.scale) + 1) /2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v1.y = (((1 - v1.y/cam.scale) / 2)* HEIGHT);// / (cam.scale);
+	v1.x = (((v1.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) /2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v1.y = (((1 - v1.y/camera.GetScale()) / 2)* HEIGHT);// / (cam.scale);
 
-	v2.x = (((v2.x/(cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v2.y = (((1 - v2.y/cam.scale) / 2 )* HEIGHT);// / (cam.scale);
+	v2.x = (((v2.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v2.y = (((1 - v2.y/camera.GetScale()) / 2 )* HEIGHT);// / (cam.scale);
 }
 
 void clearFrameBuffer(SDL_Surface* frame_buffer) {
@@ -210,7 +204,7 @@ void clearFrameBuffer(SDL_Surface* frame_buffer) {
 	}
 }
 //Returns true if all projected vertices lay outside of view frustum
-bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam) {
+bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
 	//left and right
 	if (v0.x < 0 && v1.x < 0 && v2.x < 0) return true;
 	if (v0.x >WIDTH && v1.x > WIDTH && v2.x > WIDTH) return true;
@@ -218,8 +212,8 @@ bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &cam) {
 	if (v0.y < 0 && v1.y < 0 && v2.y < 0) return true;
 	if (v0.y > HEIGHT && v1.y > HEIGHT && v2.y > HEIGHT) return true;
 	//near and far
-	if (v0.z < (-cam.position.z + CAM_NEAR_PLANE) && v1.z < (-cam.position.z + CAM_NEAR_PLANE) && v2.z < (-cam.position.z + CAM_NEAR_PLANE)) return true;
-	if (v0.z > (-cam.position.z + CAM_FAR_PLANE) && v1.z > (-cam.position.z + CAM_FAR_PLANE) && v2.z > (-cam.position.z +CAM_FAR_PLANE)) return true;
+	if (v0.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v1.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v2.z < (-camera.GetPosition().z + CAM_NEAR_PLANE)) return true;
+	if (v0.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v1.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v2.z > (-camera.GetPosition().z +CAM_FAR_PLANE)) return true;
 
 	return false;
 }
@@ -256,7 +250,7 @@ int main(int argc, char* argv[]) {
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
 
-	Camera camera = Camera(glm::vec3(0.f, 1.f, 6.f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
+	Camera camera = Camera(glm::vec3(0.f, 1.f, 6.f), 0.f, 90.f, 30.f, (float)WIDTH / (float)HEIGHT);
 
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
@@ -292,9 +286,9 @@ int main(int argc, char* argv[]) {
 				delete triangle;
 
 				//move vertices to camera space
-				v0.position = (camera.view_matrix) * glm::vec4(v0.position, 1.f);
-				v1.position = (camera.view_matrix) * glm::vec4(v1.position, 1.f);
-				v2.position = (camera.view_matrix) * glm::vec4(v2.position, 1.f);
+				v0.position = (camera.GetViewMatrix()) * glm::vec4(v0.position, 1.f);
+				v1.position = (camera.GetViewMatrix()) * glm::vec4(v1.position, 1.f);
+				v2.position = (camera.GetViewMatrix()) * glm::vec4(v2.position, 1.f);
 
 				glm::vec3 v0cam = v0.position;
 				glm::vec3 v1cam = v1.position;
