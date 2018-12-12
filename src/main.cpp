@@ -287,7 +287,7 @@ int main(int argc, char* argv[]) {
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
 	std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 
-	ModelLoader::loadScene(model_path, mesh_list/*, loaded_textures*/);
+	LoadScene(model_path, mesh_list);
 
 	uint32_t triangle_count = 0;
 	updateSkyColor();
