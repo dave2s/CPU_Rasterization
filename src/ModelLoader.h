@@ -3,4 +3,4 @@
 #include <vector>
 #include "Mesh.h"
 
-void LoadScene(std::string& model_path, std::vector<Mesh*>& meshes);
+void LoadScene(std::string& modelPath, std::vector<Mesh*>& meshes);

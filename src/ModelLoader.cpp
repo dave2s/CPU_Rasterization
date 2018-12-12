@@ -18,14 +18,14 @@ unsigned char* LoadTextureFile(std::string& path, std::string& dir, int& width, 
 	return imgData;
 }
 
-std::vector<Mesh::Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std::string type_name, std::string &dir)
+std::vector<Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std::string type_name, std::string &dir)
 {
-	std::vector<Mesh::Texture> textures;
+	std::vector<Texture> textures;
 	for (uint32_t i = 0; i < mtl->GetTextureCount(type); ++i)
 	{
 		aiString path;
 		bool tex_loaded;
-		Mesh::Texture tex;
+		Texture tex;
 		int width, height, channels;
 
 		mtl->GetTexture(type, i, &path);
@@ -48,16 +48,16 @@ std::vector<Mesh::Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std
 
 Mesh* ProcessTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir)
 {
-	std::vector<Mesh::Vertex> vertices;
+	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
 	aiMaterial *mtl;
-	Mesh::Material myMaterial;
-	std::vector<Mesh::Texture> textures;
+	Material myMaterial;
+	std::vector<Texture> textures;
 
 	glm::vec3 tmp;
 	for (unsigned i = 0; i < mesh->mNumVertices; ++i)
 	{
-		Mesh::Vertex v;
+		Vertex v;
 		tmp.x = mesh->mVertices[i].x;
 		tmp.y = mesh->mVertices[i].y;
 		tmp.z = mesh->mVertices[i].z;
@@ -104,13 +104,13 @@ Mesh* ProcessTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir)
 		myMaterial.specluar_color = glm::f32vec4(specular.r, specular.g, specular.b, specular.a);
 		myMaterial.shininess = shininess;
 
-		std::vector<Mesh::Texture> diff_Map = LoadTextures(mtl, aiTextureType_DIFFUSE, "texture_diffuse",dir);
+		std::vector<Texture> diff_Map = LoadTextures(mtl, aiTextureType_DIFFUSE, "texture_diffuse",dir);
 		textures.insert(textures.end(), diff_Map.begin(), diff_Map.end());
-		std::vector<Mesh::Texture> spec_map = LoadTextures(mtl, aiTextureType_SPECULAR, "texture_specular",dir);
+		std::vector<Texture> spec_map = LoadTextures(mtl, aiTextureType_SPECULAR, "texture_specular",dir);
 		textures.insert(textures.end(), spec_map.begin(), spec_map.end());
 	}
 
-	return new Mesh(vertices, indices, vertices.size(), indices.size(), false, myMaterial, 0.18f, textures);
+	return new Mesh(vertices, indices, false, myMaterial, 0.18f, textures);
 }
 
 void ProcessSceneTree(const aiScene* scene, std::vector<Mesh*> &meshes, aiNode* node, std::string& dir)
@@ -127,16 +127,16 @@ void ProcessSceneTree(const aiScene* scene, std::vector<Mesh*> &meshes, aiNode* 
 	}
 }
 
-void LoadScene(std::string& model_path, std::vector<Mesh*>& meshes)
+void LoadScene(std::string& modelPath, std::vector<Mesh*>& meshes)
 {
 	Assimp::Importer importer;
 	const aiScene* scene = nullptr;
-	scene = importer.ReadFile(model_path, aiProcess_Triangulate | aiProcess_GenNormals);
+	scene = importer.ReadFile(modelPath, aiProcess_Triangulate | aiProcess_GenNormals);
 	if (!scene || !scene->mRootNode || scene->mFlags & (AI_SCENE_FLAGS_INCOMPLETE | AI_SCENE_FLAGS_VALIDATION_WARNING))
 	{
 		std::cout << "Model importer failed. flags: " << scene->mFlags << std::endl;
 	}
-	std::string dir = model_path.substr(0, model_path.find_last_of('/'));
+	std::string dir = modelPath.substr(0, modelPath.find_last_of('/'));
 	aiNode* node = scene->mRootNode;
 	ProcessSceneTree(scene, meshes, node, dir);
 }

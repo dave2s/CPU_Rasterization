@@ -243,10 +243,10 @@ bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) 
 
 bool backfaceCulling(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
 #ifndef SMOOTH_SHADING
-	glm::f32vec3 N = Mesh::calcTriangleUnNormal(v0, v1, v2);
+	glm::f32vec3 N = CalcTriangleUnNormal(v0, v1, v2);
 #else
 	//For backface culling we use NOT interpolated normal which is same for the whole triangle
-	glm::f32vec3 N = Mesh::calcTriangleUnNormal(v0, v1, v2);
+	glm::f32vec3 N = CalcTriangleUnNormal(v0, v1, v2);
 #endif
 	if (glm::dot(N, (glm::vec3(v0) - glm::vec3(0))) > 0) {
 		return true;
@@ -306,13 +306,11 @@ int main(int argc, char* argv[]) {
 
 		for (auto mesh_itr = mesh_list.begin(); mesh_itr != mesh_list.end(); ++mesh_itr) {
 			Mesh* mesh = (*mesh_itr);
-			triangle_count = mesh->getTriangleCount();
+			triangle_count = mesh->GetTriangleCount();
 			for (uint32_t i = 0; i < triangle_count; ++i) {
-				Mesh::Vertex* triangle = mesh->getTriangle(i);
-				Mesh::Vertex v0 = triangle[0];
-				Mesh::Vertex v1 = triangle[1];
-				Mesh::Vertex v2 = triangle[2];
-				delete triangle;
+				Vertex v0 = mesh->GetTrianglePoint(i, 0);
+				Vertex v1 = mesh->GetTrianglePoint(i, 1);
+				Vertex v2 = mesh->GetTrianglePoint(i, 2);
 
 				//move vertices to camera space
 				v0.position = (camera.GetViewMatrix()) * glm::vec4(v0.position, 1.f);
@@ -347,11 +345,11 @@ int main(int argc, char* argv[]) {
 
 #ifdef BOUNDING_BOX
 				glm::uvec2 bounding_box[2];
-				Mesh::computeTriangleBoundingBox(bounding_box, v0.position, v1.position, v2.position);
+				ComputeTriangleBoundingBox(bounding_box, v0.position, v1.position, v2.position);
 #endif			
 				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
 				//2*triangle area - to normalize barycentric later
-				float parallelogram_area = Mesh::edgeFunction(v0.position, v1.position, v2.position);
+				float parallelogram_area = EdgeFunction(v0.position, v1.position, v2.position);
 
 				///Barycentric optimization - precompute these so we can just add steps within the pixel loop instead of cumputing these many times
 				//precompute barycentric coords for bounding box corner - unnormalized by 2*triangle_area
@@ -361,9 +359,9 @@ int main(int argc, char* argv[]) {
 				glm::vec2 pixel = glm::vec2(0 + 0.5f, 0 + 0.5f);
 #endif
 				std::vector<float> tuv_row;
-				tuv_row.push_back(Mesh::edgeFunction(v1.position, v2.position, pixel));
-				tuv_row.push_back(Mesh::edgeFunction(v2.position, v0.position, pixel));
-				tuv_row.push_back(Mesh::edgeFunction(v0.position, v1.position, pixel));
+				tuv_row.push_back(EdgeFunction(v1.position, v2.position, pixel));
+				tuv_row.push_back(EdgeFunction(v2.position, v0.position, pixel));
+				tuv_row.push_back(EdgeFunction(v0.position, v1.position, pixel));
 				//precompute edge deltas for y and x (zmena x a y mezi vrcholy)
 				std::vector<float> edges_y; std::vector<float> edges_x;
 				edges_y.push_back(v2.position.y - v1.position.y);
@@ -402,7 +400,7 @@ int main(int argc, char* argv[]) {
 
 						//sample center of the pixel...for antialiasing loop "pixel loop x" over more samples
 						//pixel = glm::vec2(x + 0.5, y + 0.5);
-						if (Mesh::isPixelInTriangle(tuv, v0.position, v1.position, v2.position))
+						if (IsPixelInTriangle(tuv, v0.position, v1.position, v2.position))
 						{
 							uv.x = tuv[1] / parallelogram_area;
 							uv.y = tuv[2] / parallelogram_area;
@@ -411,23 +409,23 @@ int main(int argc, char* argv[]) {
 
 							if (z < zbuffer[x + y * HEIGHT] /* && z > (CAM_NEAR_PLANE)*/) {
 								zbuffer[x + y * HEIGHT] = z;
-								pixel_color = 0.9f*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color;
+								pixel_color = 0.9f*mesh->GetMaterial().diffuse_color + AMBIENT_LIGHT * mesh->GetMaterial().ambient_color;
 
 								glm::vec3 N;
 								glm::f32vec3 d = glm::f32vec3(0);
 								glm::f32vec3 s = glm::f32vec3(0);
 
-								if (!mesh->textures.empty()) {
+								if (!mesh->GetTextures().empty()) {
 									// Calculate shading and texturing
 									// calcFragmentProperties
 									glm::vec2 tex_coords;
-									Mesh::Texture texture;
-									for (auto tex_itr = mesh->textures.begin(); tex_itr != mesh->textures.end(); ++tex_itr) {
+									Texture texture;
+									for (auto tex_itr = mesh->GetTextures().begin(); tex_itr != mesh->GetTextures().end(); ++tex_itr) {
 										if ((*tex_itr).type == "texture_diffuse") {
 											texture = (*tex_itr);
 										}
 									}
-									Mesh::calcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, texture.height, texture.width, OUT N, OUT tex_coords);
+									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, texture.height, texture.width, OUT N, OUT tex_coords);
 
 									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam/ -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
 									/*float fragment_x = z * ((v0.position.x / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y);
@@ -457,7 +455,7 @@ int main(int argc, char* argv[]) {
 									}*/
 								}
 								else {
-									Mesh::calcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, OUT N);
+									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, OUT N);
 									//interpolate point in camera space
 									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam / -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
 
@@ -476,14 +474,14 @@ int main(int argc, char* argv[]) {
 
 										//glm::vec3 ref_dir = angle_of_incidence;
 										glm::vec3 ref_dir = light_direction;
-										Mesh::calcReflectedDirection(N, ref_dir);
+										CalcReflectedDirection(N, ref_dir);
 
-										d += mesh->albedo * light_intensity * glm::f32vec3(std::max(0.f, glm::dot(N, -light_direction)));
+										d += mesh->GetAlbedo() * light_intensity * glm::f32vec3(std::max(0.f, glm::dot(N, -light_direction)));
 
-										s += light_intensity * std::pow(std::max(0.f, glm::dot(ref_dir, view_direction)), mesh->material.shininess);
+										s += light_intensity * std::pow(std::max(0.f, glm::dot(ref_dir, view_direction)), mesh->GetMaterial().shininess);
 
 									}
-									pixel_color = glm::clamp((d * mesh->material.diffuse_color + s * mesh->material.specluar_color + mesh->material.ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
+									pixel_color = glm::clamp((d * mesh->GetMaterial().diffuse_color + s * mesh->GetMaterial().specluar_color + mesh->GetMaterial().ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
 										//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
 									
 									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
