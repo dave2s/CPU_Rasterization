@@ -8,7 +8,7 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, bool
 	  m_Textures(textures),
 	  m_Indices(indices),
 	  m_Vertices(vertices),
-	  m_TriangleCount(vertices.size()/3),
+	  m_TriangleCount(indices.size()/3),
 	  m_SingleSided(singleSided)
 {}
 
