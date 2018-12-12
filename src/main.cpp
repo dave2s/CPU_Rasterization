@@ -15,6 +15,7 @@
 #include "Light.h"
 #include "Defines.h"
 #include "main.h"
+#include "omp.h"
 
 bool quit = false;
 enum ERROR_CODES { E_OK, E_FAIL }; // ???
@@ -380,8 +381,10 @@ int main(int argc, char* argv[]) {
 				glm::f32vec3 pixel_color;
 				///PIXEL LOOP y, main scan-line loop
 #ifdef BOUNDING_BOX
+				//#pragma omp simd
 				for (uint16_t y = bounding_box[0].y; y <= bounding_box[1].y; ++y) {
 #else
+				//#pragma omp simd
 				for (uint16_t y = 0; y <= HEIGHT; ++y) {
 #endif
 					OUT float z;
@@ -393,11 +396,12 @@ int main(int argc, char* argv[]) {
 
 					///PIXEL LOOP x
 #ifdef BOUNDING_BOX
+					//#pragma omp simd
 					for (uint16_t x = bounding_box[0].x; x <= bounding_box[1].x; ++x) {
 #else
+					//#pragma omp simd
 					for (uint16_t x = 0; x <= WIDTH; ++x) {
 #endif
-
 						//sample center of the pixel...for antialiasing loop "pixel loop x" over more samples
 						//pixel = glm::vec2(x + 0.5, y + 0.5);
 						if (IsPixelInTriangle(tuv, v0.position, v1.position, v2.position))

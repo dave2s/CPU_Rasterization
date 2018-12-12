@@ -38,10 +38,7 @@ void CalcFragmentProperties(Vertex& v0, Vertex& v1, Vertex& v2, glm::vec3 v0cam,
 #else
 	//Interpolate vertex normals using barycentric coordinates.
 	//Perspective correction: divide by respective v.z then multiply by fragment.z
-	N.x = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.x / v0.position.z + uv.x*v1.normal.x / v1.position.z + uv.y*v2.normal.x / v2.position.z));
-	N.y = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.y / v0.position.z + uv.x*v1.normal.y / v1.position.z + uv.y*v2.normal.y / v2.position.z));
-	N.z = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.z / v0.position.z + uv.x*v1.normal.z / v1.position.z + uv.y*v2.normal.z / v2.position.z));
-	N = glm::normalize(N);
+	N = glm::normalize((fragmentDepth*((1 - uv.x - uv.y)*v0.normal / v0.position.z + uv.x*v1.normal / v1.position.z + uv.y*v2.normal / v2.position.z)));
 #endif
 	///Textures
 	//interpolation with perspective correction (divide by respective vertex depth in camera space, then multiply by fragment depth)
@@ -73,8 +70,6 @@ void CalcFragmentProperties(Vertex& v0, Vertex& v1, Vertex& v2, glm::vec3 v0cam,
 #else
 	//Interpolate vertex normals using barycentric coordinates.
 	//Perspective correction: divide by respective v.z then multiply by fragment.z
-	N.x = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.x / v0.position.z + uv.x*v1.normal.x / v1.position.z + uv.y*v2.normal.x / v2.position.z));
-	N.y = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.y / v0.position.z + uv.x*v1.normal.y / v1.position.z + uv.y*v2.normal.y / v2.position.z));
-	N.z = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.z / v0.position.z + uv.x*v1.normal.z / v1.position.z + uv.y*v2.normal.z / v2.position.z));
+	N = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal / v0.position.z + uv.x*v1.normal / v1.position.z + uv.y*v2.normal / v2.position.z));
 #endif
 }
