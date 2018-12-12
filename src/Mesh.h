@@ -73,6 +73,10 @@ public:
 
 	static bool isPixelInTriangle(std::vector<float> tuv,glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
 
+	static void calcReflectedDirection(glm::vec3 &NHit, glm::vec3 & incident_dir) {
+		incident_dir = incident_dir - 2.f * NHit*(glm::dot(NHit, incident_dir));
+	}
+
 	~Mesh();
 
 private:

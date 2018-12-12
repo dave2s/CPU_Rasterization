@@ -118,17 +118,17 @@ bool Mesh::isPixelInTriangle(std::vector<float> tuv, glm::vec3 v0, glm::vec3 v1,
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
 	if (tuv[0] == 0) {
 		glm::vec2 edge1 = glm::vec2(v2 - v1);
-		if (edge1.y <= 0 || (edge1.y == 0 && edge1.x <= 0));
+		if (!(edge1.y <= 0 || (edge1.y == 0 && edge1.x <= 0)));
 		return false;
 	}
 	if (tuv[1] == 0) {
 		glm::vec2 edge2 = glm::vec2(v0 - v2);
-		if (edge2.y <= 0 || (edge2.y == 0 && edge2.x <= 0));
+		if (!(edge2.y <= 0 || (edge2.y == 0 && edge2.x <= 0)));
 		return false;
 	}
 	if (tuv[2] == 0) {
 		glm::vec2 edge0 = glm::vec2(v1 - v0);
-		if (edge0.y <= 0 || (edge0.y == 0 && edge0.x <= 0));
+		if (!(edge0.y <= 0 || (edge0.y == 0 && edge0.x <= 0)));
 		return false;
 	}
 	return true;

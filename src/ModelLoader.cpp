@@ -12,7 +12,7 @@ ModelLoader::ModelLoader()
 
 void ModelLoader::loadScene(std::string& model_path, std::vector<Mesh*>& meshes/*, std::vector<Mesh::Texture>& loaded_textures*/) {
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(model_path, aiProcess_FixInfacingNormals | aiProcess_GlobalScale | aiProcess_Triangulate | aiProcess_GenNormals /*| aiProcess_FlipUVs*/);
+	const aiScene* scene = importer.ReadFile(model_path, aiProcess_Triangulate | aiProcess_GenNormals /*| aiProcess_FlipUVs*/);
 	if (!scene || !scene->mRootNode || scene->mFlags & (AI_SCENE_FLAGS_INCOMPLETE | AI_SCENE_FLAGS_VALIDATION_WARNING)) {
 		std::cout << "Model importer failed. flags: " << scene->mFlags << std::endl;
 	}
