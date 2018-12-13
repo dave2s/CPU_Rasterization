@@ -2,9 +2,8 @@
 
 ///For getting working directory path
 //COMMENT THIS LINE IF NOT WINDOWS
-#define WINDOWS
 #include <stdio.h>
-#ifdef WINDOWS
+#ifdef _WIN32
 #include<direct.h>
 #define GetCurrentDir _getcwd
 #else

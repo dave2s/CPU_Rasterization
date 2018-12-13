@@ -12,27 +12,51 @@
 #endif
 
 #define TO_RADIANS(x)  x*M_PI/180.f
+const float DEG90 = TO_RADIANS(90);
+const float ROTSTEP = 15;
+const float MOVSTEP = 0.2f;
 
 const float inf = std::numeric_limits<float>::max();
 
 class Camera
 {
 public:
-	Camera(glm::vec3 origin, glm::vec3 front, float fovy, float aspect_ratio);
-	~Camera();
+	Camera(glm::vec3 origin, float pitch, float yaw, float fovy, float aspect_ratio);
 
-	glm::mat4 view_matrix;
-	glm::vec3 position;
-	glm::mat4 projection_matrix;
-	float aspect_ratio;
-	float fovy;
-	float scale;
+	void ChangePosition(glm::vec3 difference);
+	void ChangeRotation(float pitch, float yaw);
+	void Reset();
 
-	void Update(glm::vec3 direction);
-	/*float near_plane = NEAR_PLANE;
-	float far_plane = FAR_PLANE;*/
+	inline float& GetAspectRatio()
+	{
+		return m_AspectRatio;
+	}
+
+	inline float& GetScale()
+	{
+		return m_Scale;
+	}
+
+	inline glm::mat4& GetViewMatrix()
+	{
+		return m_ViewMatrix;
+	}
+
+	inline glm::vec3& GetPosition()
+	{
+		return m_Position;
+	}
 
 private:
+	void Update();
 
+	glm::mat4 m_ViewMatrix;
+	glm::vec3 m_Position;
+	glm::vec3 m_Origin;
+	float m_PitchOrigin;
+	float m_YawOrigin;
+	float m_AspectRatio;
+	float m_Scale;
+	float m_Pitch;
+	float m_Yaw;
 };
-

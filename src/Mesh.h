@@ -5,85 +5,121 @@
 #include "Camera.h"
 #include "Defines.h"
 
-//const float inf = std::numeric_limits<float>::max();
+struct Vertex
+{
+	glm::f32vec3 position;
+	glm::f32vec3 normal;
+	glm::f32vec2 tex_coords;
+};
+
+struct Material
+{
+	glm::f32vec3 diffuse_color;
+	glm::f32vec3 specluar_color;
+	glm::f32vec3 ambient_color;
+	float shininess;
+};
+
+struct Texture
+{
+	unsigned char* data;
+	uint32_t id;
+	std::string type;
+	std::string path;
+	int width;
+	int height;
+	int channels;
+};
+
+inline glm::f32vec3 CalcTriangleUnNormal(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
+{
+	return glm::cross(v1-v0, v2-v0);
+}
+
+inline glm::f32vec3 CalcTriangleNormal(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
+{
+	return glm::normalize(glm::cross(v1 - v0, v2 - v0));
+}
+
+/*
+return > 0 if c is on the left side of v0-v1 line
+return 0 if c lays on v0-v1 line
+return <0 if c lays on the right side of v0-v1 line
+flip vertices v0 and v1 to invert the return values
+*/
+inline float EdgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 c)
+{
+	return (v1.y - v0.y)*(c.x - v0.x)-(v1.x - v0.x)*(c.y - v0.y);
+}
+
+inline void CalcReflectedDirection(glm::vec3& Nhit, glm::vec3& incidentDir)
+{
+	incidentDir -= 2.f * Nhit*(glm::dot(Nhit, incidentDir));
+}
+
+void ComputeTriangleBoundingBox(glm::uvec2(&boundaryAlignet)[2], glm::vec3& v0, glm::vec3& v1, glm::vec3& v2);
+
+void CalcFragmentProperties(Vertex& v0, Vertex& v1, Vertex& v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2& uv, float& fragmentDepth, int& textureHeight, int& textureWidth, glm::vec3& N, glm::vec2& textureCoords);
+
+void CalcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragmentDepth, glm::vec3& N);
+
+inline bool CheckIncorrectEdge(glm::vec2 edge)
+{
+	return (edge.y > 0 && (edge.y != 0 || edge.x > 0));
+}
+
+inline bool IsPixelInTriangle(std::vector<float> tuv, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2)
+{
+	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
+	glm::vec2 edge;
+	return (!((tuv[0] < 0 || tuv[1] < 0 || tuv[2] < 0)
+	   || ((tuv[0] == 0) && (CheckIncorrectEdge(glm::vec2(v2-v1))))
+	   || ((tuv[1] == 0) && (CheckIncorrectEdge(glm::vec2(v0-v2))))
+	   || ((tuv[2] == 0) && (CheckIncorrectEdge(glm::vec2(v1-v0))))));
+}
+
 class Mesh
 {
 
 public:
-	Mesh();
-
-	struct Vertex {
-		glm::f32vec3 position;
-		glm::f32vec3 normal;
-		glm::f32vec2 tex_coords;
-	};
-
-	struct Material {
-		glm::f32vec3 diffuse_color;
-		glm::f32vec3 specluar_color;
-		glm::f32vec3 ambient_color;
-		float shininess;
-	};
-
-	struct Texture {
-		unsigned char* data;
-		uint32_t id;
-		std::string type;
-		std::string path;
-		int width;
-		int height;
-		int channels;
-		//data?
-	};
-
-	float albedo;
-	Material material;
-	std::vector<Texture> textures;
-
-	//glm::vec2 boundary_points[2] = { glm::vec2(inf), glm::vec2(-inf) };
-
-	bool isSingleSided() { return single_sided; }
-	uint32_t getTriangleCount() { return indices_len/3; }
-
-	//Return triangle by index of the triangle
-	Vertex* getTriangle(unsigned int idx) {
-		Vertex* triangle = new Vertex[3];
-		triangle[0] = vertices[indices[0 + 3 * idx]];
-		triangle[1] = vertices[indices[1 + 3 * idx]];
-		triangle[2] = vertices[indices[2 + 3 * idx]];
-		return triangle;
+	inline bool IsSingleSided()
+	{
+		return m_SingleSided;
 	}
 
-	static glm::f32vec3 calcTriangleUnNormal(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
-		return glm::cross(v1-v0, v2-v0);
-	}
-	static glm::f32vec3 calcTriangleNormal(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2) {
-		return glm::normalize(glm::cross(v1 - v0, v2 - v0));
+	inline uint32_t& GetTriangleCount()
+	{
+		return m_TriangleCount;
 	}
 
-	Mesh(std::vector<Vertex> vertices, std::vector< unsigned int> indices, unsigned int vertices_len, unsigned int indices_len, bool singleSided, Mesh::Material my_material, float albedo, std::vector<Texture> textures);
-
-	static const glm::uvec2* computeTriangleBoundingBox(glm::uvec2(&pixel_aligned_boundary_points)[2],glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2);
-
-	static float edgeFunction(glm::vec3 v0, glm::vec3 v1, glm::vec2 pixel);
-
-	static void calcFragmentProperties(Vertex & v0, Vertex & v1, Vertex & v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, int& texture_height, int& texture_width, glm::vec3 &N, glm::vec2 &texture_coords);
-
-	static void calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 v0cam, glm::vec3 v1cam, glm::vec3 v2cam, glm::vec2 &uv, float &fragment_depth, glm::vec3 &N);
-
-	static bool isPixelInTriangle(std::vector<float> tuv,glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
-
-	static void calcReflectedDirection(glm::vec3 &NHit, glm::vec3 & incident_dir) {
-		incident_dir = incident_dir - 2.f * NHit*(glm::dot(NHit, incident_dir));
+	inline Vertex GetTrianglePoint(unsigned int idx, unsigned int idy)
+	{
+		return m_Vertices[3*idx+idy];
 	}
 
-	~Mesh();
+	inline Material& GetMaterial()
+	{
+		return m_Material;
+	}
+
+	inline float& GetAlbedo()
+	{
+		return m_Albedo;
+	}
+
+	inline std::vector<Texture>& GetTextures()
+	{
+		return m_Textures;
+	}
+
+	Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, bool singleSided, Material myMaterial, float albedo, std::vector<Texture> textures);
 
 private:
-	std::vector<unsigned int> indices;
-	std::vector<Vertex> vertices;
-	uint32_t vertex_count;
-	uint32_t indices_len;
-	bool single_sided;
+	float m_Albedo;
+	Material m_Material;
+	std::vector<Texture> m_Textures;
+	std::vector<unsigned int> m_Indices;
+	std::vector<Vertex> m_Vertices;
+	uint32_t m_TriangleCount;
+	bool m_SingleSided;
 };
-

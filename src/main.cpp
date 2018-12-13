@@ -59,16 +59,28 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 	if (event.type == SDL_KEYDOWN) {
 		switch (event.key.keysym.sym) {
 		case SDLK_w:
-			camera.position[2] -= 0.2f;
+			camera.ChangePosition(glm::vec3(0.f, 0.f, -MOVSTEP));
 			break;
 		case SDLK_s:
-			camera.position[2] += 0.2f;
+			camera.ChangePosition(glm::vec3(0.f, 0.f, MOVSTEP));
 			break;
 		case SDLK_a:
-			camera.position[0] -= 0.2f;
+			camera.ChangePosition(glm::vec3(-MOVSTEP, 0.f, 0.f));
 			break;
 		case SDLK_d:
-			camera.position[0] += 0.2f;
+			camera.ChangePosition(glm::vec3(MOVSTEP, 0.f, 0.f));
+			break;
+		case SDLK_j:
+			camera.ChangeRotation(0, ROTSTEP);
+			break;
+		case SDLK_l:
+			camera.ChangeRotation(0, -ROTSTEP);
+			break;
+		case SDLK_i:
+			camera.ChangeRotation(ROTSTEP, 0);
+			break;
+		case SDLK_k:
+			camera.ChangeRotation(-ROTSTEP, 0);
 			break;
 		case SDLK_LEFT:
 			if (!light_list.empty())
@@ -87,21 +99,17 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 				((PointLight*)light_list.at(0))->position[1] -= 1.0f;
 			break;
 		case SDLK_c:
-			camera.position[1] -= 0.2f;
+			camera.ChangePosition(glm::vec3(0.f, -MOVSTEP, 0.f));
 			break;
 		case SDLK_r:
-			camera.position = { 0.f ,0.f,0.0f };
+			camera.Reset();
 			break;
 		case SDLK_SPACE:
-			camera.position[1] += 0.2f;
-			break;
-		case SDLK_l:
-			//((RT_PointLight*)light_list.at(0))->position = glm::vec3(0.f, 0.f, 0.f);
-			//light_list[1]->position = calcRandPos(LO0x, LO0y, LO0z, HI0x, HI0y, HI0z);
+			camera.ChangePosition(glm::vec3(0.f, MOVSTEP, 0.f));
 			break;
 		case SDLK_g:
 				if (global_light_on) {
- 					for (auto light = light_list.begin(); light != light_list.end();) {
+					for (auto light = light_list.begin(); light != light_list.end();) {
 						if ((*light)->getType() == Light::distant) {
 							light_list_off.push_back(*light);
 							light_list.erase(light);
@@ -122,7 +130,6 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 				updateSkyColor();
 			break;
 		}
-		camera.Update(glm::vec3(0.f, 0.f, -1.f));
 
 		//return;
 	}
@@ -135,6 +142,7 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			quit = 1;
 		}
 	}
+
 	/*float x1 ;float x2;
 	float y1 ;float y2;
 	//const Uint8* keystate = SDL_GetKeyboardState(NULL);
@@ -202,18 +210,16 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 	v2.y = 2 * v2.y / 0.5;
 }*/
 //(0 < v.x < width);(height > v.y > 0)
+void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
+	v0.x = (((v0.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v0.y = (((1 - v0.y/camera.GetScale()) / 2)* HEIGHT);// / cam.scale;
 
-void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam) {
-	v0.x = (((v0.x / (cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v0.y = (((1 - v0.y / cam.scale) / 2)* HEIGHT);// / cam.scale;
+	v1.x = (((v1.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) /2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v1.y = (((1 - v1.y/camera.GetScale()) / 2)* HEIGHT);// / (cam.scale);
 
-	v1.x = (((v1.x / (cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v1.y = (((1 - v1.y / cam.scale) / 2)* HEIGHT);// / (cam.scale);
-
-	v2.x = (((v2.x / (cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v2.y = (((1 - v2.y / cam.scale) / 2)* HEIGHT);// / (cam.scale);
+	v2.x = (((v2.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v2.y = (((1 - v2.y/camera.GetScale()) / 2 )* HEIGHT);// / (cam.scale);
 }
-
 void clearFrameBuffer(SDL_Surface* frame_buffer) {
 	for (int y = 0; y < HEIGHT; ++y) {
 		for (int x = 0; x < WIDTH; ++x) {
@@ -222,7 +228,7 @@ void clearFrameBuffer(SDL_Surface* frame_buffer) {
 	}
 }
 //Returns true if all projected vertices lay outside of view frustum
-bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam) {
+bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
 	//left and right
 	if (v0.x < 0 && v1.x < 0 && v2.x < 0) return true;
 	if (v0.x > WIDTH && v1.x > WIDTH && v2.x > WIDTH) return true;
@@ -230,18 +236,17 @@ bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam) {
 	if (v0.y < 0 && v1.y < 0 && v2.y < 0) return true;
 	if (v0.y > HEIGHT && v1.y > HEIGHT && v2.y > HEIGHT) return true;
 	//near and far
-	if (v0.z < (-cam.position.z + CAM_NEAR_PLANE) && v1.z < (-cam.position.z + CAM_NEAR_PLANE) && v2.z < (-cam.position.z + CAM_NEAR_PLANE)) return true;
-	if (v0.z > (-cam.position.z + CAM_FAR_PLANE) && v1.z > (-cam.position.z + CAM_FAR_PLANE) && v2.z > (-cam.position.z + CAM_FAR_PLANE)) return true;
-
+	if (v0.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v1.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v2.z < (-camera.GetPosition().z + CAM_NEAR_PLANE)) return true;
+	if (v0.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v1.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v2.z > (-camera.GetPosition().z +CAM_FAR_PLANE)) return true;
 	return false;
 }
 
 bool backfaceCulling(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
 #ifndef SMOOTH_SHADING
-	glm::f32vec3 N = Mesh::calcTriangleUnNormal(v0, v1, v2);
+	glm::f32vec3 N = CalcTriangleUnNormal(v0, v1, v2);
 #else
 	//For backface culling we use NOT interpolated normal which is same for the whole triangle
-	glm::f32vec3 N = Mesh::calcTriangleUnNormal(v0, v1, v2);
+	glm::f32vec3 N = CalcTriangleUnNormal(v0, v1, v2);
 #endif
 	if (glm::dot(N, (glm::vec3(v0) - glm::vec3(0))) > 0) {
 		return true;
@@ -260,12 +265,10 @@ int main(int argc, char* argv[]) {
 	zbuffer = std::vector<float>(HEIGHT*WIDTH);
 
 	main_window = SDL_CreateWindow("Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
-
 	if (main_window == NULL) {
 		std::cerr << "SDL2 Main window creation failed.";
 		return E_FAIL;
 	}
-
 	renderer = SDL_CreateRenderer(main_window, -1, 0);
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
@@ -284,7 +287,7 @@ int main(int argc, char* argv[]) {
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
 	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 
-	ModelLoader::loadScene(model_path, mesh_list/*, loaded_textures*/);
+	LoadScene(model_path, mesh_list);
 
 	uint32_t triangle_count = 0;
 	updateSkyColor();
@@ -297,27 +300,24 @@ int main(int argc, char* argv[]) {
 #endif
 		resetZBuffer(OUT zbuffer, CAM_FAR_PLANE);
 		clearFrameBuffer(frame_buffer);
-
 		while (SDL_PollEvent(&event)) {
 			MovePolling(event, camera);
 		}
 
 		for (auto mesh_itr = mesh_list.begin(); mesh_itr != mesh_list.end(); ++mesh_itr) {
 			Mesh* mesh = (*mesh_itr);
-			triangle_count = mesh->getTriangleCount();
+			triangle_count = mesh->GetTriangleCount();
 			for (uint32_t i = 0; i < triangle_count; ++i) {
-				Mesh::Vertex* triangle = mesh->getTriangle(i);
-				Mesh::Vertex v0 = triangle[0];
-				Mesh::Vertex v1 = triangle[1];
-				Mesh::Vertex v2 = triangle[2];
-				delete triangle;
+				Vertex v0 = mesh->GetTrianglePoint(i, 0);
+				Vertex v1 = mesh->GetTrianglePoint(i, 1);
+				Vertex v2 = mesh->GetTrianglePoint(i, 2);
 
 				//move vertices to camera space
-				v0.position = (camera.view_matrix) * glm::vec4(v0.position, 1.f);
-				v1.position = (camera.view_matrix) * glm::vec4(v1.position, 1.f);
-				v2.position = (camera.view_matrix) * glm::vec4(v2.position, 1.f);
-				/*
-				for (auto light = light_list.begin(); light != light_list.end(); ++light) {
+				v0.position = (camera.GetViewMatrix()) * glm::vec4(v0.position, 1.f);
+				v1.position = (camera.GetViewMatrix()) * glm::vec4(v1.position, 1.f);
+				v2.position = (camera.GetViewMatrix()) * glm::vec4(v2.position, 1.f);
+
+				/*for (auto light = light_list.begin(); light != light_list.end(); ++light) {
 					if ((*light)->getType() == Light::point) {
 						((PointLight*)(*light))->position = camera.view_matrix * (glm::vec4(((PointLight*)(*light))->position, 1.f));
 					}
@@ -345,12 +345,11 @@ int main(int argc, char* argv[]) {
 
 #ifdef BOUNDING_BOX
 				glm::uvec2 bounding_box[2];
-				Mesh::computeTriangleBoundingBox(bounding_box, v0.position, v1.position, v2.position);
+				ComputeTriangleBoundingBox(bounding_box, v0.position, v1.position, v2.position);
 #endif			
 				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
 				//2*triangle area - to normalize barycentric later
-				float parallelogram_area = Mesh::edgeFunction(v0.position, v1.position, v2.position);
-
+				float parallelogram_area = EdgeFunction(v0.position, v1.position, v2.position);
 				/*
 				static const int sub_step = 256;
 				static const int sub_mask = sub_step - 1;
@@ -366,9 +365,9 @@ int main(int argc, char* argv[]) {
 				glm::vec2 pixel = glm::vec2(0 + 0.5f, 0 + 0.5f);
 #endif
 				std::vector<float> tuv_row;
-				tuv_row.push_back(Mesh::edgeFunction(v1.position, v2.position, pixel));
-				tuv_row.push_back(Mesh::edgeFunction(v2.position, v0.position, pixel));
-				tuv_row.push_back(Mesh::edgeFunction(v0.position, v1.position, pixel));
+				tuv_row.push_back(EdgeFunction(v1.position, v2.position, pixel));
+				tuv_row.push_back(EdgeFunction(v2.position, v0.position, pixel));
+				tuv_row.push_back(EdgeFunction(v0.position, v1.position, pixel));
 				//precompute edge deltas for y and x (zmena x a y mezi vrcholy)
 				std::vector<float> edges_y; std::vector<float> edges_x;
 				edges_y.push_back(v2.position.y - v1.position.y);
@@ -385,7 +384,6 @@ int main(int argc, char* argv[]) {
 				glm::vec2 uv;
 				//pixel color sent to buffer
 				glm::f32vec3 pixel_color;
-
 				///PIXEL LOOP y, main scan-line loop
 				float z;
 #ifdef BOUNDING_BOX
@@ -408,7 +406,7 @@ int main(int argc, char* argv[]) {
 #endif
 						//sample center of the pixel...for antialiasing loop "pixel loop x" over more samples
 						//pixel = glm::vec2(x + 0.5, y + 0.5);
-						if (Mesh::isPixelInTriangle(tuv, v0.position, v1.position, v2.position))
+						if (IsPixelInTriangle(tuv, v0.position, v1.position, v2.position))
 						{
 							uv.x = tuv[1] / parallelogram_area;
 							uv.y = tuv[2] / parallelogram_area;
@@ -417,23 +415,23 @@ int main(int argc, char* argv[]) {
 
 							if (z < zbuffer[x + y * HEIGHT] /* && z > (CAM_NEAR_PLANE)*/) {
 								zbuffer[x + y * HEIGHT] = z;
-								pixel_color = 0.9f*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color;
+								pixel_color = 0.9f*mesh->GetMaterial().diffuse_color + AMBIENT_LIGHT * mesh->GetMaterial().ambient_color;
 
 								glm::vec3 N;
 								glm::f32vec3 d = glm::f32vec3(0);
 								glm::f32vec3 s = glm::f32vec3(0);
 
-								if (!mesh->textures.empty()) {
+								if (!mesh->GetTextures().empty()) {
 									// Calculate shading and texturing
 									// calcFragmentProperties
 									glm::vec2 tex_coords;
-									Mesh::Texture texture;
-									for (auto tex_itr = mesh->textures.begin(); tex_itr != mesh->textures.end(); ++tex_itr) {
+									Texture texture;
+									for (auto tex_itr = mesh->GetTextures().begin(); tex_itr != mesh->GetTextures().end(); ++tex_itr) {
 										if ((*tex_itr).type == "texture_diffuse") {
 											texture = (*tex_itr);
 										}
 									}
-									Mesh::calcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, texture.height, texture.width, OUT N, OUT tex_coords);
+									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, texture.height, texture.width, OUT N, OUT tex_coords);
 
 									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam/ -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
 									/*float fragment_x = z * ((v0.position.x / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y);
@@ -463,7 +461,7 @@ int main(int argc, char* argv[]) {
 									}*/
 								}
 								else {
-									Mesh::calcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, OUT N);
+									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, OUT N);
 									//interpolate point in camera space
 									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam / -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
 
@@ -482,14 +480,14 @@ int main(int argc, char* argv[]) {
 
 										//glm::vec3 ref_dir = angle_of_incidence;
 										glm::vec3 ref_dir = light_direction;
-										Mesh::calcReflectedDirection(N, ref_dir);
+										CalcReflectedDirection(N, ref_dir);
 
-										d += mesh->albedo * light_intensity * glm::f32vec3(std::max(0.f, glm::dot(N, -light_direction)));
+										d += mesh->GetAlbedo() * light_intensity * glm::f32vec3(std::max(0.f, glm::dot(N, -light_direction)));
 
-										s += light_intensity * std::pow(std::max(0.f, glm::dot(ref_dir, view_direction)), mesh->material.shininess);
+										s += light_intensity * std::pow(std::max(0.f, glm::dot(ref_dir, view_direction)), mesh->GetMaterial().shininess);
 
 									}
-									pixel_color = glm::clamp((1.0f*mesh->material.emissive_color+d * mesh->material.diffuse_color + s * mesh->material.specluar_color + mesh->material.ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
+									pixel_color = glm::clamp((d * mesh->GetMaterial().diffuse_color + s * mesh->GetMaterial().specluar_color + mesh->GetMaterial().ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
 										//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
 									
 									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
@@ -527,5 +525,3 @@ int main(int argc, char* argv[]) {
 		}
 
 	return E_OK;
-
-	}
