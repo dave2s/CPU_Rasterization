@@ -95,7 +95,7 @@ public:
 
 	inline Vertex GetTrianglePoint(unsigned int idx, unsigned int idy)
 	{
-		return m_Vertices[3*idx+idy];
+		return m_Vertices[m_Indices[3*idx+idy]];
 	}
 
 	inline Material& GetMaterial()

@@ -16,6 +16,7 @@
 #include "Light.h"
 #include "Defines.h"
 #include "main.h"
+#include "omp.h"
 
 bool quit = false;
 enum ERROR_CODES { E_OK, E_FAIL }; // ???
@@ -388,8 +389,10 @@ int main(int argc, char* argv[]) {
 				///PIXEL LOOP y, main scan-line loop
 				float z;
 #ifdef BOUNDING_BOX
-				for (uint32_t y = bounding_box[0].y + 0.5f; y <= bounding_box[1].y; ++y) {
+				//#pragma omp simd
+				for (uint16_t y = bounding_box[0].y ; y <= bounding_box[1].y; ++y) {
 #else
+				//#pragma omp simd
 				for (uint16_t y = 0; y <= HEIGHT; ++y) {
 #endif
 
@@ -401,8 +404,10 @@ int main(int argc, char* argv[]) {
 
 					///PIXEL LOOP x
 #ifdef BOUNDING_BOX
-					for (uint32_t x = bounding_box[0].x + 0.5f; x <= bounding_box[1].x; ++x) {
+					//#pragma omp simd
+					for (uint16_t x = bounding_box[0].x ; x <= bounding_box[1].x; ++x) {
 #else
+					//#pragma omp simd
 					for (uint16_t x = 0; x <= WIDTH; ++x) {
 #endif
 						//sample center of the pixel...for antialiasing loop "pixel loop x" over more samples
