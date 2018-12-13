@@ -28,6 +28,7 @@ std::vector<Light*> light_list_off;
 
 const glm::f32vec3 const_sky_color = glm::f32vec3(U2F(160), U2F(217), U2F(255));
 uint32_t sky_color;
+unsigned char def_buffer [HEIGHT*WIDTH*4];
 
 bool global_light_on = true;
 float global_light_intensity = 2.f;
@@ -37,9 +38,9 @@ float global_light_intensity = 2.f;
 /*
 *	int x,y - top left origin coords of the drawn image space
 */
-void setRGBAPixel(int x, int y, SDL_Surface* rendered_image, glm::u8vec3 rgba) {
+void setRGBAPixel(int x, int y, unsigned char* pixels, glm::u8vec3 rgba) {
 	//rendered_image->pixels[x + 640 * y] = 
-	unsigned char* pixels = (unsigned char*)rendered_image->pixels;
+//	unsigned char* pixels = (unsigned char*)rendered_image->pixels;
 	pixels[4 * (y*WIDTH + x) + 0] = rgba[2];//blue
 	pixels[4 * (y*WIDTH + x) + 1] = rgba[1];//green
 	pixels[4 * (y*WIDTH + x) + 2] = rgba[0];//red
@@ -53,6 +54,14 @@ void updateSkyColor() {
 			sky += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->intensity / 4.f, 0.f, 1.f);
 		}
 	}
+
+	for (int y = 0; y < HEIGHT; ++y) {
+		for (int x = 0; x < WIDTH; ++x) {
+			setRGBAPixel(x, y, def_buffer, F32vec2U8vec(sky));
+		}
+	}
+
+/*
 	glm::u8vec3 skyInt = F32vec2U8vec(sky);
 	sky_color = 255;
 	sky_color |= skyInt[0] << 24;
@@ -61,7 +70,6 @@ void updateSkyColor() {
 	//frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 
 	//sky_color = SDL_MapRGBA(pixel_format, skyInt[0], skyInt[1], skyInt[2], 255);
-	/*
 	for (uint32_t i = 0; i < HEIGHT*WEIGHT; i++)
 	{
 		setRGBAPixel(i, g_SkyBuffer, sky_color);
@@ -195,8 +203,11 @@ void CreateGlobalLight(glm::vec3 direction, float intensity, glm::vec3 color) {
 
 void resetZBuffer(std::vector<float> &zbuffer, float far_plane)
 {
-	for (uint32_t i = 0; i < HEIGHT*WIDTH; ++i) {
+	for (uint32_t i = 0; i < WIDTH; ++i) {
 		zbuffer[i] = far_plane;
+	}
+	for (uint32_t i = 1; i < HEIGHT; ++i) {
+		memcpy(zbuffer.data()+(WIDTH*i), zbuffer.data(), sizeof(float)*WIDTH);
 	}
 }
 
@@ -238,8 +249,7 @@ void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &ca
 	v2.y = (((1 - v2.y/camera.GetScale()) / 2 )* HEIGHT);// / (cam.scale);
 }
 void clearFrameBuffer(SDL_Surface* frame_buffer) {
-
-	SDL_FillRect(frame_buffer, NULL, sky_color);
+	memcpy(frame_buffer->pixels, def_buffer, HEIGHT*WIDTH*4);
 	/*
 	for (int y = 0; y < HEIGHT; ++y) {
 		for (int x = 0; x < WIDTH; ++x) {
@@ -479,7 +489,7 @@ int main(int argc, char* argv[]) {
 									//	Lambient is ambient light intensity
 									//	M is material color
 									pixel_color = glm::clamp(angle_of_incidence*(U8vec2F32vec(rgb)) + AMBIENT_LIGHT * (U8vec2F32vec(rgb)), 0.f, 1.f);
-									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+									setRGBAPixel(x, y, (unsigned char*)frame_buffer->pixels, F32vec2U8vec(pixel_color));
 									/*}
 									else {
 										setRGBAPixel(x, y, frame_buffer, glm::u8vec3(180,120,180));
@@ -515,7 +525,7 @@ int main(int argc, char* argv[]) {
 									pixel_color = glm::clamp((1.0f*mesh->GetMaterial().emissive_color + d * mesh->GetMaterial().diffuse_color + s * mesh->GetMaterial().specluar_color + mesh->GetMaterial().ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
 									//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
 
-									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+									setRGBAPixel(x, y, (unsigned char*)frame_buffer->pixels, F32vec2U8vec(pixel_color));
 								}
 							}
 						}
