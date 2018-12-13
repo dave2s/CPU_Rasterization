@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip> //to set FP precision in std::stream<< outputs
 #include <string>
+#include <algorithm>
 #include <chrono>
 #include "SDL.h"
 #include "SDL_pixels.h"
