@@ -72,7 +72,6 @@ inline bool CheckIncorrectEdge(glm::vec2 edge)
 inline bool IsPixelInTriangle(std::vector<float> tuv, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2)
 {
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
-	glm::vec2 edge;
 	return (!((tuv[0] < 0 || tuv[1] < 0 || tuv[2] < 0)
 	   || ((tuv[0] == 0) && (CheckIncorrectEdge(glm::vec2(v2-v1))))
 	   || ((tuv[1] == 0) && (CheckIncorrectEdge(glm::vec2(v0-v2))))

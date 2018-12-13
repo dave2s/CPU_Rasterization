@@ -10,12 +10,14 @@
 #include "glm/glm.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/string_cast.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "Mesh.h"
 #include "ModelLoader.h"
 #include "Camera.h"
 #include "Light.h"
 #include "Defines.h"
 #include "main.h"
+#include "omp.h"
 
 bool quit = false;
 enum ERROR_CODES { E_OK, E_FAIL }; // ???
@@ -25,7 +27,8 @@ std::vector<Light*> light_list;
 std::vector<Light*> light_list_off;
 
 const glm::f32vec3 const_sky_color = glm::f32vec3(U2F(160), U2F(217), U2F(255));
-glm::f32vec3 sky_color;
+uint32_t sky_color;
+unsigned char def_buffer [HEIGHT*WIDTH*4];
 
 bool global_light_on = true;
 float global_light_intensity = 2.f;
@@ -35,22 +38,29 @@ float global_light_intensity = 2.f;
 /*
 *	int x,y - top left origin coords of the drawn image space
 */
-void setRGBAPixel(int x, int y, SDL_Surface* rendered_image, glm::u8vec3 rgba) {
+void setRGBAPixel(int x, int y, unsigned char* pixels, glm::u8vec3 rgba) {
 	//rendered_image->pixels[x + 640 * y] = 
-	unsigned char* pixels = (unsigned char*)rendered_image->pixels;
-	pixels[4 * (y*rendered_image->w + x) + 0] = rgba[2];//blue
-	pixels[4 * (y*rendered_image->w + x) + 1] = rgba[1];//green
-	pixels[4 * (y*rendered_image->w + x) + 2] = rgba[0];//red
-	pixels[4 * (y*rendered_image->w + x) + 3] = glm::u8(255);//rgba[3];//alpha
+//	unsigned char* pixels = (unsigned char*)rendered_image->pixels;
+	pixels[4 * (y*WIDTH + x) + 0] = rgba[2];//blue
+	pixels[4 * (y*WIDTH + x) + 1] = rgba[1];//green
+	pixels[4 * (y*WIDTH + x) + 2] = rgba[0];//red
+	pixels[4 * (y*WIDTH + x) + 3] = glm::u8(255);//rgba[3];//alpha
 }
 
 void updateSkyColor() {
-	sky_color = glm::f32vec3(0.f);
+	glm::f32vec3 sky = glm::f32vec3(0.f);
 	for (auto light = light_list.begin(); light != light_list.end(); ++light) {
 		if ((*light)->getType() == Light::distant) {
-			sky_color += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->intensity / 4.f, 0.f, 1.f);
+			sky += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->intensity / 4.f, 0.f, 1.f);
 		}
 	}
+
+	for (int y = 0; y < HEIGHT; ++y) {
+		for (int x = 0; x < WIDTH; ++x) {
+			setRGBAPixel(x, y, def_buffer, F32vec2U8vec(sky));
+		}
+	}
+
 }
 
 void MovePolling(SDL_Event &event, Camera &camera) {
@@ -179,8 +189,11 @@ void CreateGlobalLight(glm::vec3 direction, float intensity, glm::vec3 color) {
 
 void resetZBuffer(std::vector<float> &zbuffer, float far_plane)
 {
-	for (uint32_t i = 0; i < HEIGHT*WIDTH; ++i) {
+	for (uint32_t i = 0; i < WIDTH; ++i) {
 		zbuffer[i] = far_plane;
+	}
+	for (uint32_t i = 1; i < HEIGHT; ++i) {
+		memcpy(zbuffer.data()+(WIDTH*i), zbuffer.data(), sizeof(float)*WIDTH);
 	}
 }
 
@@ -211,25 +224,22 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 	v2.y = 2 * v2.y / 0.5;
 }*/
 //(0 < v.x < width);(height > v.y > 0)
-void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &camera) {
-	v0.x = (((v0.x / (camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v0.y = (((1 - v0.y / camera.GetScale()) / 2)* HEIGHT);// / cam.scale;
+void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
+	v0.x = (((v0.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v0.y = (((1 - v0.y/camera.GetScale()) / 2)* HEIGHT);// / cam.scale;
 
-	v1.x = (((v1.x / (camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v1.y = (((1 - v1.y / camera.GetScale()) / 2)* HEIGHT);// / (cam.scale);
+	v1.x = (((v1.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) /2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v1.y = (((1 - v1.y/camera.GetScale()) / 2)* HEIGHT);// / (cam.scale);
 
-	v2.x = (((v2.x / (camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v2.y = (((1 - v2.y / camera.GetScale()) / 2)* HEIGHT);// / (cam.scale);
+	v2.x = (((v2.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
+	v2.y = (((1 - v2.y/camera.GetScale()) / 2 )* HEIGHT);// / (cam.scale);
 }
 void clearFrameBuffer(SDL_Surface* frame_buffer) {
-	for (int y = 0; y < HEIGHT; ++y) {
-		for (int x = 0; x < WIDTH; ++x) {
-			setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(sky_color));
-		}
-	}
+	memcpy(frame_buffer->pixels, def_buffer, HEIGHT*WIDTH*4);
+
 }
 //Returns true if all projected vertices lay outside of view frustum
-bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &camera) {
+bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
 	//left and right
 	if (v0.x < 0 && v1.x < 0 && v2.x < 0) return true;
 	if (v0.x > WIDTH && v1.x > WIDTH && v2.x > WIDTH) return true;
@@ -238,7 +248,7 @@ bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &camera)
 	if (v0.y > HEIGHT && v1.y > HEIGHT && v2.y > HEIGHT) return true;
 	//near and far
 	if (v0.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v1.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v2.z < (-camera.GetPosition().z + CAM_NEAR_PLANE)) return true;
-	if (v0.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v1.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v2.z > (-camera.GetPosition().z + CAM_FAR_PLANE)) return true;
+	if (v0.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v1.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v2.z > (-camera.GetPosition().z +CAM_FAR_PLANE)) return true;
 	return false;
 }
 
@@ -274,17 +284,17 @@ int main(int argc, char* argv[]) {
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
 
-	Camera camera = Camera(glm::vec3(0.f, 1.f, 10.8f), 0.f, 90.f, 30.f, (float)WIDTH / (float)HEIGHT);
-	//CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
-	//CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
+	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), 0.f,90.f, 30.f, (float)WIDTH / (float)HEIGHT);
+	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
+	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
 	CreateGlobalLight(glm::vec3(0.f, 0.f, -1.f), global_light_intensity, glm::f32vec3(U2F(255), U2F(255), U2F(255)));
 
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
 	//std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
-	std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
+	//std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
 	//std::string model_path = std::string(current_dir).append("/example/bunny/bunny.obj");
-	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
+	std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
 	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 	//std::string model_path = std::string(current_dir).append("/example/armadillo/armadillo.ply");
@@ -339,7 +349,7 @@ int main(int argc, char* argv[]) {
 				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost)slo priradit vrcholy pixelum
 
 				///very naive and not robust
-				//if (frustumCulling(v0.position, v1.position, v2.position, camera)) continue;
+				if (frustumCulling(v0.position, v1.position, v2.position, camera)) continue;
 
 #ifdef BACKFACE_CULLING
 				if (backfaceCulling(v0cam, v1cam, v2cam)) {
@@ -455,7 +465,7 @@ int main(int argc, char* argv[]) {
 									//	Lambient is ambient light intensity
 									//	M is material color
 									pixel_color = glm::clamp(angle_of_incidence*(U8vec2F32vec(rgb)) + AMBIENT_LIGHT * (U8vec2F32vec(rgb)), 0.f, 1.f);
-									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+									setRGBAPixel(x, y, (unsigned char*)frame_buffer->pixels, F32vec2U8vec(pixel_color));
 									/*}
 									else {
 										setRGBAPixel(x, y, frame_buffer, glm::u8vec3(180,120,180));
@@ -491,7 +501,7 @@ int main(int argc, char* argv[]) {
 									pixel_color = glm::clamp((1.0f*mesh->GetMaterial().emissive_color + d * mesh->GetMaterial().diffuse_color + s * mesh->GetMaterial().specluar_color + mesh->GetMaterial().ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
 									//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
 
-									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
+									setRGBAPixel(x, y, (unsigned char*)frame_buffer->pixels, F32vec2U8vec(pixel_color));
 								}
 							}
 						}
@@ -504,11 +514,12 @@ int main(int argc, char* argv[]) {
 					tuv_row[0] += edges_x[0];
 					tuv_row[1] += edges_x[1];
 					tuv_row[2] += edges_x[2];
-					}//end line loop
-				}//end triangle loop for a given mesh
-				}//end mesh loop
-					///Draw
-					//SDL_LockSurface(frame_buffer);
+				}//end line loop
+			}//end triangle loop for a given mesh
+		}//end mesh loop
+
+			///Draw
+			//SDL_LockSurface(frame_buffer);
 		SDL_UpdateTexture(texture, NULL, frame_buffer->pixels, WIDTH * sizeof(Uint32));//
 		//SDL_UnlockSurface(frame_buffer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -521,6 +532,8 @@ int main(int argc, char* argv[]) {
 		std::cout << "; " << std::fixed << std::setprecision(2) << 1000000.f / (float)microseconds << " fps" << std::endl;
 		std::flush(std::cout);
 #endif
-			}
+
+	}
+
 	return E_OK;
-		}
+}
