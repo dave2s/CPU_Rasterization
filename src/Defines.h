@@ -42,10 +42,10 @@ const float inf = std::numeric_limits<float>::max();
 //repeat textures if coordinates extrapolate out of the texture size
 #define TEXTURE_REPEAT
 
-//const std::string MODEL = "/example/sponza/sponza.obj";
-//const std::string MODEL = "/example/CornellBox/CornellBox-Original.obj";
-//const std::string MODEL = "/example/bunny/bunny.obj";
-//const std::string MODEL = "/example/f16/f16.obj";
-const std::string MODEL = "/example/suzanne/suzanne.obj";
-//const std::string MODEL = "/example/cruiser/cruiser.obj";
-//const std::string MODEL = "/example/armadillo/armadillo.ply";
+//const std::string DEFAULT_MODEL = "example/sponza/sponza.obj";
+//const std::string DEFAULT_MODEL = "example/CornellBox/CornellBox-Original.obj";
+//const std::string DEFAULT_MODEL = "example/bunny/bunny.obj";
+//const std::string DEFAULT_MODEL = "example/f16/f16.obj";
+const std::string DEFAULT_MODEL = "example/suzanne/suzanne.obj";
+//const std::string DEFAULT_MODEL = "example/cruiser/cruiser.obj";
+//const std::string DEFAULT_MODEL = "example/armadillo/armadillo.ply";

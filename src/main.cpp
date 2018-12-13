@@ -266,14 +266,22 @@ int main(int argc, char* argv[])
 	frameBuffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frameBuffer);
 
-	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), 0.f,90.f, 30.f, (float)WIDTH / (float)HEIGHT);
+	Camera camera = Camera(glm::vec3(0.f, 1.f, 8.f), 0.f,90.f, 30.f, (float)WIDTH / (float)HEIGHT);
 	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
 	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
 	CreateGlobalLight(glm::vec3(0.f, 0.f, -1.f), GLOBAL_LIGHT_INTENSITY, glm::f32vec3(U2F(255), U2F(255), U2F(255)));
 
-	char currentDir[FILENAME_MAX];
-	GetCurrentDir(currentDir, FILENAME_MAX);
-	std::string modelPath = std::string(currentDir).append("/").append(MODEL);
+	std::string modelPath;
+	if (argc == 2)
+	{
+		modelPath = std::string(argv[1]);
+	}
+	else
+	{
+		char currentDir[FILENAME_MAX];
+		GetCurrentDir(currentDir, FILENAME_MAX);
+		modelPath = std::string(currentDir).append("/").append(DEFAULT_MODEL);
+	}
 
 	LoadScene(modelPath, g_MeshList);
 
