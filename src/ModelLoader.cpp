@@ -92,16 +92,19 @@ Mesh* ProcessTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir)
 		aiColor4D diffuse;
 		aiColor4D ambient;
 		aiColor4D specular;
+		aiColor4D emissive;
 		float shininess;
 
 		aiGetMaterialColor(mtl, AI_MATKEY_COLOR_DIFFUSE, &diffuse);
 		aiGetMaterialColor(mtl, AI_MATKEY_COLOR_AMBIENT, &ambient);
 		aiGetMaterialColor(mtl, AI_MATKEY_COLOR_SPECULAR, &specular);
+		aiGetMaterialColor(mtl, AI_MATKEY_COLOR_EMISSIVE, &emissive);
 		aiGetMaterialFloat(mtl, AI_MATKEY_SHININESS, &shininess);
 
 		myMaterial.ambient_color = (glm::f32vec4(ambient.r, ambient.g, ambient.b, ambient.a) == glm::f32vec4(0)) ? glm::f32vec3(AMBIENT_LIGHT) : glm::f32vec4(ambient.r, ambient.g, ambient.b, ambient.a);
 		myMaterial.diffuse_color = glm::f32vec4(diffuse.r, diffuse.g, diffuse.b, diffuse.a);
 		myMaterial.specluar_color = glm::f32vec4(specular.r, specular.g, specular.b, specular.a);
+		myMaterial.emissive_color = glm::f32vec4(emissive.r, emissive.g, emissive.b, emissive.a);
 		myMaterial.shininess = shininess;
 
 		std::vector<Texture> diff_Map = LoadTextures(mtl, aiTextureType_DIFFUSE, "texture_diffuse",dir);

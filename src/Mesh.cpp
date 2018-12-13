@@ -77,3 +77,4 @@ void CalcFragmentProperties(Vertex& v0, Vertex& v1, Vertex& v2, glm::vec3 v0cam,
 	N.y = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.y / v0.position.z + uv.x*v1.normal.y / v1.position.z + uv.y*v2.normal.y / v2.position.z));
 	N.z = (fragmentDepth*((1 - uv.x - uv.y)*v0.normal.z / v0.position.z + uv.x*v1.normal.z / v1.position.z + uv.y*v2.normal.z / v2.position.z));
 #endif
+}

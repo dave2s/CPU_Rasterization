@@ -3,6 +3,7 @@
 #include <iomanip>//to set FP precision in std::stream<< outputs
 #include <string>
 #include <chrono>
+#include <algorithm>
 #include "SDL.h"
 #include "SDL_pixels.h"
 #include "SDL_render.h"
@@ -273,7 +274,7 @@ int main(int argc, char* argv[]) {
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
 
-	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
+	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), 0.f,90.f, 30.f, (float)WIDTH / (float)HEIGHT);
 	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
 	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
 	CreateGlobalLight(glm::vec3(0.f, 0.f, -1.f), global_light_intensity, glm::f32vec3(U2F(255), U2F(255), U2F(255)));
@@ -387,11 +388,11 @@ int main(int argc, char* argv[]) {
 				///PIXEL LOOP y, main scan-line loop
 				float z;
 #ifdef BOUNDING_BOX
-				for (uint32_t y = bounding_box[0].y+0.5f; y <= bounding_box[1].y; ++y) {
+				for (uint32_t y = bounding_box[0].y + 0.5f; y <= bounding_box[1].y; ++y) {
 #else
 				for (uint16_t y = 0; y <= HEIGHT; ++y) {
 #endif
-					
+
 					//unnormalized barycentric
 
 					tuv[0] = tuv_row[0];
@@ -400,7 +401,7 @@ int main(int argc, char* argv[]) {
 
 					///PIXEL LOOP x
 #ifdef BOUNDING_BOX
-					for (uint32_t x = bounding_box[0].x+0.5f; x <= bounding_box[1].x; ++x) {
+					for (uint32_t x = bounding_box[0].x + 0.5f; x <= bounding_box[1].x; ++x) {
 #else
 					for (uint16_t x = 0; x <= WIDTH; ++x) {
 #endif
@@ -415,7 +416,7 @@ int main(int argc, char* argv[]) {
 
 							if (z < zbuffer[x + y * HEIGHT] /* && z > (CAM_NEAR_PLANE)*/) {
 								zbuffer[x + y * HEIGHT] = z;
-								pixel_color = 0.9f*mesh->GetMaterial().diffuse_color + AMBIENT_LIGHT * mesh->GetMaterial().ambient_color;
+								//pixel_color = 0.9f*mesh->GetMaterial().diffuse_color + AMBIENT_LIGHT * mesh->GetMaterial().ambient_color;
 
 								glm::vec3 N;
 								glm::f32vec3 d = glm::f32vec3(0);
@@ -433,7 +434,7 @@ int main(int argc, char* argv[]) {
 									}
 									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, texture.height, texture.width, OUT N, OUT tex_coords);
 
-									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam/ -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
+									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam / -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
 									/*float fragment_x = z * ((v0.position.x / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y);
 									float fragment_y = z * ((v0.position.y / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.y / -v1.position.z) * uv.x + (v2.position.y / -v2.position.z) * uv.y);*/
 
@@ -487,9 +488,9 @@ int main(int argc, char* argv[]) {
 										s += light_intensity * std::pow(std::max(0.f, glm::dot(ref_dir, view_direction)), mesh->GetMaterial().shininess);
 
 									}
-									pixel_color = glm::clamp((d * mesh->GetMaterial().diffuse_color + s * mesh->GetMaterial().specluar_color + mesh->GetMaterial().ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
-										//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
-									
+									pixel_color = glm::clamp((1.0f*mesh->GetMaterial().emissive_color + d * mesh->GetMaterial().diffuse_color + s * mesh->GetMaterial().specluar_color + mesh->GetMaterial().ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
+									//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
+
 									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
 								}
 							}
@@ -503,12 +504,12 @@ int main(int argc, char* argv[]) {
 					tuv_row[0] += edges_x[0];
 					tuv_row[1] += edges_x[1];
 					tuv_row[2] += edges_x[2];
-					}//end line loop
-				}//end triangle loop for a given mesh
-			}//end mesh loop
+				}//end line loop
+			}//end triangle loop for a given mesh
+		}//end mesh loop
 
-				///Draw
-				//SDL_LockSurface(frame_buffer);
+			///Draw
+			//SDL_LockSurface(frame_buffer);
 		SDL_UpdateTexture(texture, NULL, frame_buffer->pixels, WIDTH * sizeof(Uint32));//
 		//SDL_UnlockSurface(frame_buffer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -522,6 +523,7 @@ int main(int argc, char* argv[]) {
 		std::flush(std::cout);
 #endif
 
-		}
+	}
 
 	return E_OK;
+}
