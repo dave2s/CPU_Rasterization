@@ -101,7 +101,7 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			break;
 		case SDLK_g:
 				if (global_light_on) {
-					for (auto light = light_list.begin(); light != light_list.end();) {
+ 					for (auto light = light_list.begin(); light != light_list.end();) {
 						if ((*light)->getType() == Light::distant) {
 							light_list_off.push_back(*light);
 							light_list.erase(light);
@@ -135,7 +135,6 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			quit = 1;
 		}
 	}
-
 	/*float x1 ;float x2;
 	float y1 ;float y2;
 	//const Uint8* keystate = SDL_GetKeyboardState(NULL);
@@ -203,6 +202,7 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 	v2.y = 2 * v2.y / 0.5;
 }*/
 //(0 < v.x < width);(height > v.y > 0)
+
 void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam) {
 	v0.x = (((v0.x / (cam.aspect_ratio*cam.scale) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
 	v0.y = (((1 - v0.y / cam.scale) / 2)* HEIGHT);// / cam.scale;
@@ -260,27 +260,29 @@ int main(int argc, char* argv[]) {
 	zbuffer = std::vector<float>(HEIGHT*WIDTH);
 
 	main_window = SDL_CreateWindow("Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
+
 	if (main_window == NULL) {
 		std::cerr << "SDL2 Main window creation failed.";
 		return E_FAIL;
 	}
+
 	renderer = SDL_CreateRenderer(main_window, -1, 0);
 	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
 	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
 
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), glm::vec3(0.f, 0.f, -1.f), 30.f, (float)WIDTH / (float)HEIGHT);
-	CreatePointLight(glm::vec3(0.f, 1.f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
-	CreatePointLight(glm::vec3(0.f, 1.f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
+	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
+	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
 	CreateGlobalLight(glm::vec3(0.f, 0.f, -1.f), global_light_intensity, glm::f32vec3(U2F(255), U2F(255), U2F(255)));
 
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
 	//std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
-	//std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
+	std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
 	//std::string model_path = std::string(current_dir).append("/example/bunny/bunny.obj");
 	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
-	std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
+	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 
 	ModelLoader::loadScene(model_path, mesh_list/*, loaded_textures*/);
 
@@ -295,6 +297,7 @@ int main(int argc, char* argv[]) {
 #endif
 		resetZBuffer(OUT zbuffer, CAM_FAR_PLANE);
 		clearFrameBuffer(frame_buffer);
+
 		while (SDL_PollEvent(&event)) {
 			MovePolling(event, camera);
 		}
@@ -313,10 +316,10 @@ int main(int argc, char* argv[]) {
 				v0.position = (camera.view_matrix) * glm::vec4(v0.position, 1.f);
 				v1.position = (camera.view_matrix) * glm::vec4(v1.position, 1.f);
 				v2.position = (camera.view_matrix) * glm::vec4(v2.position, 1.f);
-
-				/*for (auto light = light_list.begin(); light != light_list.end(); ++light) {
+				/*
+				for (auto light = light_list.begin(); light != light_list.end(); ++light) {
 					if ((*light)->getType() == Light::point) {
-						((PointLight*)(*light))->position = camera.view_matrix * (glm::vec4(((PointLight*)(*light))->position, -1.f));
+						((PointLight*)(*light))->position = camera.view_matrix * (glm::vec4(((PointLight*)(*light))->position, 1.f));
 					}
 				}*/
 
@@ -348,6 +351,13 @@ int main(int argc, char* argv[]) {
 				//2*triangle area - to normalize barycentric later
 				float parallelogram_area = Mesh::edgeFunction(v0.position, v1.position, v2.position);
 
+				/*
+				static const int sub_step = 256;
+				static const int sub_mask = sub_step - 1;
+
+				bounding_box[0].x = (bounding_box[0].x + sub_mask) & ~sub_mask;
+				bounding_box[0].y = (bounding_box[0].y + sub_mask) & ~sub_mask;*/
+
 				///Barycentric optimization - precompute these so we can just add steps within the pixel loop instead of cumputing these many times
 				//precompute barycentric coords for bounding box corner - unnormalized by 2*triangle_area
 #ifdef BOUNDING_BOX
@@ -375,13 +385,15 @@ int main(int argc, char* argv[]) {
 				glm::vec2 uv;
 				//pixel color sent to buffer
 				glm::f32vec3 pixel_color;
+
 				///PIXEL LOOP y, main scan-line loop
+				float z;
 #ifdef BOUNDING_BOX
-				for (uint16_t y = bounding_box[0].y; y <= bounding_box[1].y; ++y) {
+				for (uint32_t y = bounding_box[0].y+0.5f; y <= bounding_box[1].y; ++y) {
 #else
 				for (uint16_t y = 0; y <= HEIGHT; ++y) {
 #endif
-					OUT float z;
+					
 					//unnormalized barycentric
 
 					tuv[0] = tuv_row[0];
@@ -390,11 +402,10 @@ int main(int argc, char* argv[]) {
 
 					///PIXEL LOOP x
 #ifdef BOUNDING_BOX
-					for (uint16_t x = bounding_box[0].x; x <= bounding_box[1].x; ++x) {
+					for (uint32_t x = bounding_box[0].x+0.5f; x <= bounding_box[1].x; ++x) {
 #else
 					for (uint16_t x = 0; x <= WIDTH; ++x) {
 #endif
-
 						//sample center of the pixel...for antialiasing loop "pixel loop x" over more samples
 						//pixel = glm::vec2(x + 0.5, y + 0.5);
 						if (Mesh::isPixelInTriangle(tuv, v0.position, v1.position, v2.position))
@@ -478,7 +489,7 @@ int main(int argc, char* argv[]) {
 										s += light_intensity * std::pow(std::max(0.f, glm::dot(ref_dir, view_direction)), mesh->material.shininess);
 
 									}
-									pixel_color = glm::clamp((d * mesh->material.diffuse_color + s * mesh->material.specluar_color + mesh->material.ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
+									pixel_color = glm::clamp((1.0f*mesh->material.emissive_color+d * mesh->material.diffuse_color + s * mesh->material.specluar_color + mesh->material.ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
 										//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
 									
 									setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(pixel_color));
@@ -496,7 +507,7 @@ int main(int argc, char* argv[]) {
 					tuv_row[2] += edges_x[2];
 					}//end line loop
 				}//end triangle loop for a given mesh
-				}//end mesh loop
+			}//end mesh loop
 
 				///Draw
 				//SDL_LockSurface(frame_buffer);
@@ -513,8 +524,8 @@ int main(int argc, char* argv[]) {
 		std::flush(std::cout);
 #endif
 
-			}
+		}
 
 	return E_OK;
 
-		}
+	}

@@ -116,20 +116,23 @@ void Mesh::calcFragmentProperties(Vertex &v0, Vertex &v1, Vertex &v2, glm::vec3 
 bool Mesh::isPixelInTriangle(std::vector<float> tuv, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
 	if (tuv[0] < 0 || tuv[1] < 0 || tuv[2] < 0) return false;
 	//if point is laying on the edge, verify that the edge is topleft, otherwise return false -  pixel is NOT overlapping the triangle. This convention prevents edge overlap
-	if (tuv[0] == 0) {
+	if (tuv[0] == 0.0f) {
 		glm::vec2 edge1 = glm::vec2(v2 - v1);
-		if (!(edge1.y <= 0 || (edge1.y == 0 && edge1.x <= 0)));
-		return false;
+		if (!(edge1.y <= 0 || (edge1.y == 0 && edge1.x <= 0))) {
+			return false;
+		}
 	}
-	if (tuv[1] == 0) {
+	if (tuv[1] == 0.0f) {
 		glm::vec2 edge2 = glm::vec2(v0 - v2);
-		if (!(edge2.y <= 0 || (edge2.y == 0 && edge2.x <= 0)));
-		return false;
+		if (!(edge2.y <= 0 || (edge2.y == 0 && edge2.x <= 0))) {
+			return false;
+		}
 	}
-	if (tuv[2] == 0) {
+	if (tuv[2] == 0.0f) {
 		glm::vec2 edge0 = glm::vec2(v1 - v0);
-		if (!(edge0.y <= 0 || (edge0.y == 0 && edge0.x <= 0)));
-		return false;
+		if (!(edge0.y <= 0 || (edge0.y == 0 && edge0.x <= 0))) {
+			return false;
+		}
 	}
 	return true;
 }
