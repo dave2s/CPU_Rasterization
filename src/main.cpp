@@ -10,6 +10,7 @@
 #include "glm/glm.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/string_cast.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "Mesh.h"
 #include "ModelLoader.h"
 #include "Camera.h"
@@ -26,7 +27,7 @@ std::vector<Light*> light_list;
 std::vector<Light*> light_list_off;
 
 const glm::f32vec3 const_sky_color = glm::f32vec3(U2F(160), U2F(217), U2F(255));
-glm::f32vec3 sky_color;
+uint32_t sky_color;
 
 bool global_light_on = true;
 float global_light_intensity = 2.f;
@@ -39,19 +40,33 @@ float global_light_intensity = 2.f;
 void setRGBAPixel(int x, int y, SDL_Surface* rendered_image, glm::u8vec3 rgba) {
 	//rendered_image->pixels[x + 640 * y] = 
 	unsigned char* pixels = (unsigned char*)rendered_image->pixels;
-	pixels[4 * (y*rendered_image->w + x) + 0] = rgba[2];//blue
-	pixels[4 * (y*rendered_image->w + x) + 1] = rgba[1];//green
-	pixels[4 * (y*rendered_image->w + x) + 2] = rgba[0];//red
-	pixels[4 * (y*rendered_image->w + x) + 3] = glm::u8(255);//rgba[3];//alpha
+	pixels[4 * (y*WIDTH + x) + 0] = rgba[2];//blue
+	pixels[4 * (y*WIDTH + x) + 1] = rgba[1];//green
+	pixels[4 * (y*WIDTH + x) + 2] = rgba[0];//red
+	pixels[4 * (y*WIDTH + x) + 3] = glm::u8(255);//rgba[3];//alpha
 }
 
 void updateSkyColor() {
-	sky_color = glm::f32vec3(0.f);
+	glm::f32vec3 sky = glm::f32vec3(0.f);
 	for (auto light = light_list.begin(); light != light_list.end(); ++light) {
 		if ((*light)->getType() == Light::distant) {
-			sky_color += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->intensity / 4.f, 0.f, 1.f);
+			sky += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->intensity / 4.f, 0.f, 1.f);
 		}
 	}
+	glm::u8vec3 skyInt = F32vec2U8vec(sky);
+	sky_color = 255;
+	sky_color |= skyInt[0] << 24;
+	sky_color |= skyInt[1] << 16;
+	sky_color |= skyInt[2] << 8;
+	//frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
+
+	//sky_color = SDL_MapRGBA(pixel_format, skyInt[0], skyInt[1], skyInt[2], 255);
+	/*
+	for (uint32_t i = 0; i < HEIGHT*WEIGHT; i++)
+	{
+		setRGBAPixel(i, g_SkyBuffer, sky_color);
+	}
+	*/
 }
 
 void MovePolling(SDL_Event &event, Camera &camera) {
@@ -223,11 +238,15 @@ void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &ca
 	v2.y = (((1 - v2.y/camera.GetScale()) / 2 )* HEIGHT);// / (cam.scale);
 }
 void clearFrameBuffer(SDL_Surface* frame_buffer) {
+
+	SDL_FillRect(frame_buffer, NULL, sky_color);
+	/*
 	for (int y = 0; y < HEIGHT; ++y) {
 		for (int x = 0; x < WIDTH; ++x) {
 			setRGBAPixel(x, y, frame_buffer, F32vec2U8vec(sky_color));
 		}
 	}
+	*/
 }
 //Returns true if all projected vertices lay outside of view frustum
 bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
@@ -283,9 +302,9 @@ int main(int argc, char* argv[]) {
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
 	//std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
-	std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
+	//std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
 	//std::string model_path = std::string(current_dir).append("/example/bunny/bunny.obj");
-	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
+	std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
 	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 
@@ -393,7 +412,7 @@ int main(int argc, char* argv[]) {
 				for (uint32_t y = bounding_box[0].y + 0.5f; y <= bounding_box[1].y; ++y) {
 #else
 				//#pragma omp simd
-				for (uint16_t y = 0; y <= HEIGHT; ++y) {
+				for (uint32_t y = 0; y <= HEIGHT; ++y) {
 #endif
 
 					//unnormalized barycentric
@@ -408,7 +427,7 @@ int main(int argc, char* argv[]) {
 					for (uint32_t x = bounding_box[0].x + 0.5f; x <= bounding_box[1].x; ++x) {
 #else
 					//#pragma omp simd
-					for (uint16_t x = 0; x <= WIDTH; ++x) {
+					for (uint32_t x = 0; x <= WIDTH; ++x) {
 #endif
 						//sample center of the pixel...for antialiasing loop "pixel loop x" over more samples
 						//pixel = glm::vec2(x + 0.5, y + 0.5);

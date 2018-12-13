@@ -9,15 +9,6 @@
 //Prevzato z learnopengl.com/model-loading
 //
 
-unsigned char* LoadTextureFile(std::string& path, std::string& dir, int& width, int& height, int& channels)
-{
-	unsigned char* imgData;
-
-
-	
-	return imgData;
-}
-
 std::vector<Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std::string type_name, std::string &dir)
 {
 	std::vector<Texture> textures;
