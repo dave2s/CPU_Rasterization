@@ -50,8 +50,8 @@ void setRGBAPixel(int x, int y, unsigned char* pixels, glm::u8vec3 rgba) {
 void updateSkyColor() {
 	glm::f32vec3 sky = glm::f32vec3(0.f);
 	for (auto light = light_list.begin(); light != light_list.end(); ++light) {
-		if ((*light)->getType() == Light::distant) {
-			sky += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->intensity / 4.f, 0.f, 1.f);
+		if ((*light)->GetType() == LIGHT_DISTANT) {
+			sky += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->GetIntensity() / 4.f, 0.f, 1.f);
 		}
 	}
 
@@ -95,19 +95,19 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			break;
 		case SDLK_LEFT:
 			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->position[0] -= 1.0f;
+				((PointLight*)light_list.at(0))->GetPosition()[0] -= 1.0f;
 			break;
 		case SDLK_RIGHT:
 			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->position[0] += 1.0f;
+				((PointLight*)light_list.at(0))->GetPosition()[0] += 1.0f;
 			break;
 		case SDLK_UP:
 			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->position[1] += 1.0f;
+				((PointLight*)light_list.at(0))->GetPosition()[1] += 1.0f;
 			break;
 		case SDLK_DOWN:
 			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->position[1] -= 1.0f;
+				((PointLight*)light_list.at(0))->GetPosition()[1] -= 1.0f;
 			break;
 		case SDLK_c:
 			camera.ChangePosition(glm::vec3(0.f, -MOVSTEP, 0.f));
@@ -121,7 +121,7 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 		case SDLK_g:
 			if (global_light_on) {
 				for (auto light = light_list.begin(); light != light_list.end();) {
-					if ((*light)->getType() == Light::distant) {
+					if ((*light)->GetType() == LIGHT_DISTANT) {
 						light_list_off.push_back(*light);
 						light_list.erase(light);
 					}
@@ -130,7 +130,7 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			}
 			else {
 				for (auto light = light_list_off.begin(); light != light_list_off.end();) {
-					if ((*light)->getType() == Light::distant) {
+					if ((*light)->GetType() == LIGHT_DISTANT) {
 						light_list.push_back(*light);
 						light_list_off.erase(light);
 					}
@@ -199,17 +199,17 @@ void resetZBuffer(std::vector<float> &zbuffer, float far_plane)
 
 void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 {
-	v0.x = (CAM_NEAR_PLANE * v0.x) / (-v0.z);
-	v0.y = (CAM_NEAR_PLANE * v0.y) / (-v0.z);
 	v0.z *= -1.f;
+	v0.x = (CAM_NEAR_PLANE * v0.x) / v0.z;
+	v0.y = (CAM_NEAR_PLANE * v0.y) / v0.z;
 
-	v1.x = (CAM_NEAR_PLANE * v1.x) / (-v1.z);
-	v1.y = (CAM_NEAR_PLANE * v1.y) / (-v1.z);
 	v1.z *= -1.f;
+	v1.x = (CAM_NEAR_PLANE * v1.x) / (v1.z);
+	v1.y = (CAM_NEAR_PLANE * v1.y) / (v1.z);
 
-	v2.x = (CAM_NEAR_PLANE * v2.x) / (-v2.z);
-	v2.y = (CAM_NEAR_PLANE * v2.y) / (-v2.z);
 	v2.z *= -1.f;
+	v2.x = (CAM_NEAR_PLANE * v2.x) / (v2.z);
+	v2.y = (CAM_NEAR_PLANE * v2.y) / (v2.z);
 }
 //(-1,1)
 /*void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam)
@@ -291,10 +291,11 @@ int main(int argc, char* argv[]) {
 
 	char current_dir[FILENAME_MAX];
 	GetCurrentDir(current_dir, FILENAME_MAX);
+
 	//std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
-	//std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
+	std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
 	//std::string model_path = std::string(current_dir).append("/example/bunny/bunny.obj");
-	std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
+	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
 	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
 	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
 	//std::string model_path = std::string(current_dir).append("/example/armadillo/armadillo.ply");
@@ -363,7 +364,7 @@ int main(int argc, char* argv[]) {
 #endif			
 				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
 				//2*triangle area - to normalize barycentric later
-				float parallelogram_area = EdgeFunction(v0.position, v1.position, v2.position);
+				float parallelogram_area = EdgeFunction(v0.position, v1.position, glm::vec2(v2.position.x, v2.position.y));
 				/*
 				static const int sub_step = 256;
 				static const int sub_mask = sub_step - 1;
@@ -424,8 +425,8 @@ int main(int argc, char* argv[]) {
 							//pixel depth in camera space
 							z = 1 / ((1 - uv.x - uv.y) / v0.position.z + uv.x / v1.position.z + uv.y / v2.position.z);
 
-							if (z < (zbuffer[x*HEIGHT + y])) {
-								zbuffer[x*HEIGHT + y] = z;
+							if (z < (zbuffer[x + WIDTH * y])) {
+								zbuffer[x + WIDTH * y] = z;
 								//pixel_color = 0.9f*mesh->GetMaterial().diffuse_color + AMBIENT_LIGHT * mesh->GetMaterial().ambient_color;
 
 								glm::vec3 N;
@@ -487,7 +488,7 @@ int main(int argc, char* argv[]) {
 										//hit_color = glm::f32vec3(0);
 										//is_lit = true;
 										OUT glm::vec3 light_intensity; OUT glm::vec3 light_direction; OUT float light_distance;
-										(*light)->shine(light_intensity, light_distance, light_direction, fragment_camera_space_position);
+										(*light)->Shine(light_intensity, light_distance, light_direction, fragment_camera_space_position);
 
 										//glm::vec3 ref_dir = angle_of_incidence;
 										glm::vec3 ref_dir = light_direction;

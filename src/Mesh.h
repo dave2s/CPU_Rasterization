@@ -2,7 +2,6 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
-#include "Camera.h"
 #include "Defines.h"
 
 struct Vertex

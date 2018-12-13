@@ -1,47 +1,75 @@
 #pragma once
 #include <glm/glm.hpp>
-#include "Camera.h"
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264f
-#endif
+#include "Defines.h"
+
+enum LIGHT_TYPE
+{
+	LIGHT_NONE = 0,
+	LIGHT_POINT = 1,
+	LIGHT_DISTANT = 2
+};
 
 class Light
 {
 public:
-
-	enum LIGHT_TYPE { none = 0, point = 1, distant = 2 };
-
 	Light(float intensity, glm::f32vec3 color);
 	virtual ~Light();
 
-	glm::vec3 color;
-	float intensity;
-
-	virtual void shine(glm::vec3& light_intensity, float& light_distance, glm::vec3& light_dir, glm::vec3& P);
-	virtual LIGHT_TYPE getType() { return none; }
+	virtual void Shine(glm::vec3& lightIntensity, float& lightDistance, glm::vec3& lightDir, glm::vec3& P) = 0;
+	inline virtual LIGHT_TYPE GetType()
+	{
+		return LIGHT_NONE;
+	}
+	inline float& GetIntensity()
+	{
+		return m_Intensity;
+	}
+	inline glm::vec3& GetColor()
+	{
+		return m_Color;
+	}
 protected:
-	//const float inf = std::numeric_limits<float>::max();
-	static float norm(glm::vec3 vec) { return (vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]); }
+	inline static float Norm(glm::vec3& vec)
+	{
+		return (vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
+	}
+
+	glm::vec3 m_Color;
+	float m_Intensity;
 };
 
 class PointLight : public Light
 {
-
 public:
-	glm::vec3 position;
 	PointLight(glm::vec3 pos, float intensity, glm::f32vec3 color);
 
-	void shine(glm::vec3& light_intensity, float& light_distance, glm::vec3& light_dir, glm::vec3& P);
-	LIGHT_TYPE getType() { return point; }
+	void Shine(glm::vec3& lightIntensity, float& lightDistance, glm::vec3& lightDir, glm::vec3& P) override;
+	inline LIGHT_TYPE GetType()
+	{
+		return LIGHT_POINT;
+	}
+	inline glm::vec3& GetPosition()
+	{
+		return m_Position;
+	}
+private:
+	glm::vec3 m_Position;
 };
 
 class DistantLight : public Light
 {
-
 public:
-	glm::vec3 direction;
 	DistantLight(glm::vec3 dir, float intensity, glm::f32vec3 color);
 
-	void shine(glm::vec3& light_intensity, float& light_distance, glm::vec3& light_dir, glm::vec3& P);
-	LIGHT_TYPE getType() { return distant; }
+	void Shine(glm::vec3& lightIntensity, float& lightDistance, glm::vec3& lightDir, glm::vec3& P) override;
+	inline LIGHT_TYPE GetType()
+	{
+		return LIGHT_DISTANT;
+	}
+	inline glm::vec3& GetDirection()
+	{
+		return m_Direction;
+	}
+private:
+	glm::vec3 m_Direction;
 };

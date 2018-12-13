@@ -1,10 +1,9 @@
 #pragma once
 
 ///For getting working directory path
-//COMMENT THIS LINE IF NOT WINDOWS
 #include <stdio.h>
 #ifdef _WIN32
-#include<direct.h>
+#include <direct.h>
 #define GetCurrentDir _getcwd
 #else
 #include <unistd.h>
@@ -19,8 +18,17 @@
 
 #define WIDTH 600
 #define HEIGHT 480
+
 #define PROFILE
 #define OUT
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264f
+#endif
+
+#define TO_RADIANS(x)  x*M_PI/180.f
+
+const float inf = std::numeric_limits<float>::max();
 
 //Optimization of drawing - go only trough pixels sorounding the triangle
 #define BOUNDING_BOX

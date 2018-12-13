@@ -1,6 +1,5 @@
 #include "Mesh.h"
 #include <algorithm>
-#include <iostream>
 
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, bool singleSided, Material material, float albedo, std::vector<Texture> textures)
 	: m_Albedo(albedo),

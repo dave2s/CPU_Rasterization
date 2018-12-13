@@ -1,5 +1,5 @@
-#include <iostream>
 #include "ModelLoader.h"
+#include <iostream>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -7,8 +7,8 @@
 #include "stb_image.h"
 
 //Prevzato z learnopengl.com/model-loading
-//
-std::vector<Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std::string type_name, std::string &dir)
+
+std::vector<Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std::string typeName, std::string &dir)
 {
 	std::vector<Texture> textures;
 	for (uint32_t i = 0; i < mtl->GetTextureCount(type); ++i)
@@ -29,7 +29,7 @@ std::vector<Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std::stri
 		tex.height = height;
 		tex.width = width;
 		tex.channels = channels;
-		tex.type = type_name;
+		tex.type = typeName;
 		tex.path = path.C_Str();
 		textures.push_back(tex);
 	}
@@ -127,7 +127,7 @@ void LoadScene(std::string& modelPath, std::vector<Mesh*>& meshes)
 	scene = importer.ReadFile(modelPath, aiProcess_Triangulate | aiProcess_GenNormals);
 	if (!scene || !scene->mRootNode || scene->mFlags & (AI_SCENE_FLAGS_INCOMPLETE | AI_SCENE_FLAGS_VALIDATION_WARNING))
 	{
-		std::cout << "Model importer failed. flags: " << scene->mFlags << std::endl;
+		std::cerr << "Model importer failed. flags: " << scene->mFlags << std::endl;
 	}
 	std::string dir = modelPath.substr(0, modelPath.find_last_of('/'));
 	aiNode* node = scene->mRootNode;

@@ -1,13 +1,5 @@
 #include "Camera.h"
-#include <string>
-#include <iostream>
 #include "glm/gtc/matrix_transform.hpp"
-//#define DEBUG
-#ifdef DEBUG
-#define GLM_ENABLE_EXPERIMENTAL
-#include "glm/gtx/string_cast.hpp"
-#endif
-
 #include <cmath>
 
 Camera::Camera(glm::vec3 origin, float pitch, float yaw, float fovy, float aspectRatio)
@@ -51,9 +43,7 @@ void Camera::Reset()
 	Update();
 }
 
-void Camera::Update() {
-#ifdef DEBUG
-	std::cout << glm::to_string(m_Position) << std::endl;
-#endif
+void Camera::Update()
+{
 	m_ViewMatrix = glm::lookAt(m_Position, m_Position + glm::vec3(cos(m_Yaw), sin(m_Pitch), -1.f), glm::vec3(0.f, 1.f, 0.f));
 }
