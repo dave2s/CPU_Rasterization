@@ -1,74 +1,66 @@
 #define SDL_MAIN_HANDLED
 #include <iostream>
-#include <iomanip>//to set FP precision in std::stream<< outputs
+#include <iomanip> //to set FP precision in std::stream<< outputs
 #include <string>
 #include <chrono>
-#include <algorithm>
 #include "SDL.h"
 #include "SDL_pixels.h"
 #include "SDL_render.h"
 #include "glm/glm.hpp"
-#define GLM_ENABLE_EXPERIMENTAL
-#include "glm/gtx/string_cast.hpp"
-#include "glm/gtc/type_ptr.hpp"
 #include "Mesh.h"
 #include "ModelLoader.h"
 #include "Camera.h"
 #include "Light.h"
 #include "Defines.h"
-#include "main.h"
-#include "omp.h"
 
-bool quit = false;
-enum ERROR_CODES { E_OK, E_FAIL }; // ???
+const glm::f32vec3 CONST_SKY_COLOR = glm::f32vec3(U2F(160), U2F(217), U2F(255));
+const float GLOBAL_LIGHT_INTENSITY = 2.f;
 
-std::vector<Mesh*> mesh_list;
-std::vector<Light*> light_list;
-std::vector<Light*> light_list_off;
-
-const glm::f32vec3 const_sky_color = glm::f32vec3(U2F(160), U2F(217), U2F(255));
-uint32_t sky_color;
-unsigned char def_buffer [HEIGHT*WIDTH*4];
-
-bool global_light_on = true;
-float global_light_intensity = 2.f;
-//std::vector<Light*> light_list;
-//std::vector<Mesh::Texture> loaded_textures;
+bool g_Quit = false;
+std::vector<Mesh*> g_MeshList;
+std::vector<Light*> g_LightList;
+std::vector<Light*> g_LightListOff;
+unsigned char g_DefBuffer [HEIGHT*WIDTH*4];
+bool g_GlobalLightOn = true;
 
 /*
 *	int x,y - top left origin coords of the drawn image space
 */
-void setRGBAPixel(int x, int y, unsigned char* pixels, glm::u8vec3 rgba) {
-	//rendered_image->pixels[x + 640 * y] = 
-//	unsigned char* pixels = (unsigned char*)rendered_image->pixels;
+inline void SetRGBAPixel(int x, int y, unsigned char* pixels, glm::u8vec3 rgba)
+{
 	pixels[4 * (y*WIDTH + x) + 0] = rgba[2];//blue
 	pixels[4 * (y*WIDTH + x) + 1] = rgba[1];//green
 	pixels[4 * (y*WIDTH + x) + 2] = rgba[0];//red
-	pixels[4 * (y*WIDTH + x) + 3] = glm::u8(255);//rgba[3];//alpha
+	pixels[4 * (y*WIDTH + x) + 3] = glm::u8(255);//alpha
 }
 
-void updateSkyColor() {
+void UpdateSkyColor()
+{
 	glm::f32vec3 sky = glm::f32vec3(0.f);
-	for (auto light = light_list.begin(); light != light_list.end(); ++light) {
-		if ((*light)->GetType() == LIGHT_DISTANT) {
-			sky += glm::clamp(const_sky_color*AMBIENT_LIGHT*2.f + const_sky_color * (*light)->GetIntensity() / 4.f, 0.f, 1.f);
+	for (auto light = g_LightList.begin(); light != g_LightList.end(); ++light)
+	{
+		if ((*light)->GetType() == LIGHT_DISTANT)
+		{
+			sky += glm::clamp(CONST_SKY_COLOR * AMBIENT_LIGHT * 2.f + CONST_SKY_COLOR * (*light)->GetIntensity() / 4.f, 0.f, 1.f);
 		}
 	}
 
-	for (int y = 0; y < HEIGHT; ++y) {
-		for (int x = 0; x < WIDTH; ++x) {
-			setRGBAPixel(x, y, def_buffer, F32vec2U8vec(sky));
+	for (int y = 0; y < HEIGHT; ++y)
+	{
+		for (int x = 0; x < WIDTH; ++x)
+		{
+			SetRGBAPixel(x, y, g_DefBuffer, F32vec2U8vec(sky));
 		}
 	}
 
 }
 
-void MovePolling(SDL_Event &event, Camera &camera) {
-	//SDL_PollEvent(&event);
-	//bool left_click;
-
-	if (event.type == SDL_KEYDOWN) {
-		switch (event.key.keysym.sym) {
+void MovePolling(SDL_Event& event, Camera& camera)
+{
+	if (event.type == SDL_KEYDOWN)
+	{
+		switch (event.key.keysym.sym)
+		{
 		case SDLK_w:
 			camera.ChangePosition(glm::vec3(0.f, 0.f, -MOVSTEP));
 			break;
@@ -94,20 +86,28 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			camera.ChangeRotation(-ROTSTEP, 0);
 			break;
 		case SDLK_LEFT:
-			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->GetPosition()[0] -= 1.0f;
+			if (!g_LightList.empty())
+			{
+				((PointLight*)g_LightList.at(0))->GetPosition()[0] -= 1.0f;
+			}
 			break;
 		case SDLK_RIGHT:
-			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->GetPosition()[0] += 1.0f;
+			if (!g_LightList.empty())
+			{
+				((PointLight*)g_LightList.at(0))->GetPosition()[0] += 1.0f;
+			}
 			break;
 		case SDLK_UP:
-			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->GetPosition()[1] += 1.0f;
+			if (!g_LightList.empty())
+			{
+				((PointLight*)g_LightList.at(0))->GetPosition()[1] += 1.0f;
+			}
 			break;
 		case SDLK_DOWN:
-			if (!light_list.empty())
-				((PointLight*)light_list.at(0))->GetPosition()[1] -= 1.0f;
+			if (!g_LightList.empty())
+			{
+				((PointLight*)g_LightList.at(0))->GetPosition()[1] -= 1.0f;
+			}
 			break;
 		case SDLK_c:
 			camera.ChangePosition(glm::vec3(0.f, -MOVSTEP, 0.f));
@@ -119,85 +119,66 @@ void MovePolling(SDL_Event &event, Camera &camera) {
 			camera.ChangePosition(glm::vec3(0.f, MOVSTEP, 0.f));
 			break;
 		case SDLK_g:
-			if (global_light_on) {
-				for (auto light = light_list.begin(); light != light_list.end();) {
-					if ((*light)->GetType() == LIGHT_DISTANT) {
-						light_list_off.push_back(*light);
-						light_list.erase(light);
+			if (g_GlobalLightOn)
+			{
+				for (auto light = g_LightList.begin(); light != g_LightList.end();)
+				{
+					if ((*light)->GetType() == LIGHT_DISTANT)
+					{
+						g_LightListOff.push_back(*light);
+						g_LightList.erase(light);
 					}
-					else light++;
+					else
+					{
+						light++;
+					}
 				}
 			}
-			else {
-				for (auto light = light_list_off.begin(); light != light_list_off.end();) {
-					if ((*light)->GetType() == LIGHT_DISTANT) {
-						light_list.push_back(*light);
-						light_list_off.erase(light);
+			else
+			{
+				for (auto light = g_LightListOff.begin(); light != g_LightListOff.end();)
+				{
+					if ((*light)->GetType() == LIGHT_DISTANT)
+					{
+						g_LightList.push_back(*light);
+						g_LightListOff.erase(light);
 					}
-					else light++;
+					else
+					{
+						light++;
+					}
 				}
 			}
-			global_light_on ^= 1;
-			updateSkyColor();
+			g_GlobalLightOn ^= 1;
+			UpdateSkyColor();
 			break;
 		}
-
-		//return;
 	}
 
 	if (event.type == SDL_QUIT)
-		quit = 1;
-	if (event.type == SDL_KEYUP) {
-		switch (event.key.keysym.sym) {
-		case SDLK_ESCAPE:
-			quit = 1;
+	{
+		g_Quit = 1;
+	}
+	if (event.type == SDL_KEYUP)
+	{
+		if (event.key.keysym.sym == SDLK_ESCAPE)
+		{
+			g_Quit = 1;
 		}
 	}
-
-	/*float x1 ;float x2;
-	float y1 ;float y2;
-	//const Uint8* keystate = SDL_GetKeyboardState(NULL);
-	if (event.type == SDL_MOUSEBUTTONDOWN) {
-		left_click = true;
-		x1 = event.motion.x;
-		y1 = event.motion.y;
-	}
-	if (event.type == SDL_MOUSEMOTION) {
-		//if (event.key.keysym.sym==SDLK_LCTRL) {
-		if (left_click) {
-			x2 = event.motion.x;
-			y2 = event.motion.y;
-		}
-			//std::cout << "moving mouse x: "<< event.motion.xrel<<" y: "<<event.motion.yrel <<std::endl
-		//}
-	}
-	if (event.type == SDL_MOUSEBUTTONUP) {
-		left_click = false;
-		camera.camera_position[0] += 0.0001*((x1 - x2));	//	camera.camera_position[0] += 0.001*event.motion.xrel;
-		camera.camera_position[1] += 0.0001*((y1 - y2));	//	camera.camera_position[1] += 0.001*event.motion.yrel;
-		camera.Update(glm::vec3(0.f, 0.f, 0.1f));
-	}*/
 }
 
-void CreatePointLight(glm::vec3 pos, float intensity, glm::vec3 color) {
-	light_list.push_back(new PointLight(pos, intensity, color));
-}
-
-void CreateGlobalLight(glm::vec3 direction, float intensity, glm::vec3 color) {
-	light_list.push_back(new DistantLight(direction, intensity/*/GLOBAL_LIGHT_DIVISOR*/, color));
-}
-
-void resetZBuffer(std::vector<float> &zbuffer, float far_plane)
+inline void CreatePointLight(glm::vec3 pos, float intensity, glm::vec3 color)
 {
-	for (uint32_t i = 0; i < WIDTH; ++i) {
-		zbuffer[i] = far_plane;
-	}
-	for (uint32_t i = 1; i < HEIGHT; ++i) {
-		memcpy(zbuffer.data()+(WIDTH*i), zbuffer.data(), sizeof(float)*WIDTH);
-	}
+	g_LightList.push_back(new PointLight(pos, intensity, color));
 }
 
-void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
+inline void CreateGlobalLight(glm::vec3 direction, float intensity, glm::vec3 color)
+{
+	g_LightList.push_back(new DistantLight(direction, intensity, color));
+}
+
+inline void PerspectiveDivide(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2)
 {
 	v0.z *= -1.f;
 	v0.x = (CAM_NEAR_PLANE * v0.x) / v0.z;
@@ -211,318 +192,304 @@ void perspectiveDivide(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2)
 	v2.x = (CAM_NEAR_PLANE * v2.x) / (v2.z);
 	v2.y = (CAM_NEAR_PLANE * v2.y) / (v2.z);
 }
-//(-1,1)
-/*void convertToNDC(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2, Camera &cam)
+
+inline void ConvertToRasterSpace(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, Camera& camera)
 {
-	v0.x = 2 * v0.x / 0.5 - 0.5 / 1.f;
-	v0.y = 2 * v0.y / 0.5;
+	v0.x = (((v0.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);
+	v0.y = (((1 - v0.y/camera.GetScale()) / 2)* HEIGHT);
 
-	v1.x = 2 * v1.x / 0.5 - 0.5 / 1.f;
-	v1.y = 2 * v1.y / 0.5;
+	v1.x = (((v1.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) /2)* WIDTH);
+	v1.y = (((1 - v1.y/camera.GetScale()) / 2)* HEIGHT);
 
-	v2.x = 2 * v2.x / 0.5 - 0.5 / 13.f;
-	v2.y = 2 * v2.y / 0.5;
-}*/
-//(0 < v.x < width);(height > v.y > 0)
-void convertToRasterSpace(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
-	v0.x = (((v0.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v0.y = (((1 - v0.y/camera.GetScale()) / 2)* HEIGHT);// / cam.scale;
-
-	v1.x = (((v1.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) /2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v1.y = (((1 - v1.y/camera.GetScale()) / 2)* HEIGHT);// / (cam.scale);
-
-	v2.x = (((v2.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);// / (cam.aspect_ratio*cam.scale);
-	v2.y = (((1 - v2.y/camera.GetScale()) / 2 )* HEIGHT);// / (cam.scale);
-}
-void clearFrameBuffer(SDL_Surface* frame_buffer) {
-	memcpy(frame_buffer->pixels, def_buffer, HEIGHT*WIDTH*4);
-
-}
-//Returns true if all projected vertices lay outside of view frustum
-bool frustumCulling(glm::vec3 &v0, glm::vec3 &v1, glm::vec3 &v2,Camera &camera) {
-	//left and right
-	if (v0.x < 0 && v1.x < 0 && v2.x < 0) return true;
-	if (v0.x > WIDTH && v1.x > WIDTH && v2.x > WIDTH) return true;
-	//top and bottom
-	if (v0.y < 0 && v1.y < 0 && v2.y < 0) return true;
-	if (v0.y > HEIGHT && v1.y > HEIGHT && v2.y > HEIGHT) return true;
-	//near and far
-	if (v0.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v1.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v2.z < (-camera.GetPosition().z + CAM_NEAR_PLANE)) return true;
-	if (v0.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v1.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v2.z > (-camera.GetPosition().z +CAM_FAR_PLANE)) return true;
-	return false;
+	v2.x = (((v2.x/(camera.GetAspectRatio()*camera.GetScale()) + 1) / 2)* WIDTH);
+	v2.y = (((1 - v2.y/camera.GetScale()) / 2 )* HEIGHT);
 }
 
-bool backfaceCulling(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
-#ifndef SMOOTH_SHADING
-	glm::f32vec3 N = CalcTriangleUnNormal(v0, v1, v2);
-#else
-	//For backface culling we use NOT interpolated normal which is same for the whole triangle
-	glm::f32vec3 N = CalcTriangleUnNormal(v0, v1, v2);
-#endif
-	if (glm::dot(N, (glm::vec3(v0) - glm::vec3(0))) > 0) {
-		return true;
+inline void ClearFrameBuffer(SDL_Surface* frameBuffer)
+{
+	memcpy(frameBuffer->pixels, g_DefBuffer, HEIGHT*WIDTH*4);
+}
+
+void ResetZBuffer(std::vector<float> &zbuffer, float far_plane)
+{
+	for (uint32_t i = 0; i < WIDTH; ++i)
+	{
+		zbuffer[i] = far_plane;
 	}
-	return false;
+	for (uint32_t i = 1; i < HEIGHT; ++i)
+	{
+		memcpy(zbuffer.data()+(WIDTH*i), zbuffer.data(), sizeof(float)*WIDTH);
+	}
 }
 
+//Returns true if all projected vertices lay outside of view frustum
+inline bool FrustumCulling(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, Camera& camera)
+{
+	return (
+	     //left and right
+	        (v0.x < 0 && v1.x < 0 && v2.x < 0)
+	     || (v0.x > WIDTH && v1.x > WIDTH && v2.x > WIDTH)
+     	     //top and bottom
+	     || (v0.y < 0 && v1.y < 0 && v2.y < 0)
+	     || (v0.y > HEIGHT && v1.y > HEIGHT && v2.y > HEIGHT)
+	     //near and far
+	     || (v0.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v1.z < (-camera.GetPosition().z + CAM_NEAR_PLANE) && v2.z < (-camera.GetPosition().z + CAM_NEAR_PLANE))
+	     || (v0.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v1.z > (-camera.GetPosition().z + CAM_FAR_PLANE) && v2.z > (-camera.GetPosition().z +CAM_FAR_PLANE))
+	     );
+}
 
-int main(int argc, char* argv[]) {
-	quit = false;
-	SDL_Window* main_window; SDL_Renderer* renderer;
-	SDL_Surface* frame_buffer; SDL_Texture* texture;
+inline bool BackfaceCulling(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2)
+{
+	return (glm::dot(CalcTriangleUnNormal(v0, v1, v2), (glm::vec3(v0) - glm::vec3(0))) > 0);
+}
+
+int main(int argc, char* argv[])
+{
+	SDL_Window* mainWindow;
+	SDL_Renderer* renderer;
+	SDL_Surface* frameBuffer;
+	SDL_Texture* texture;
 	SDL_Event event;
 
-	std::vector<float> zbuffer;
-	zbuffer = std::vector<float>(HEIGHT*WIDTH);
+	std::vector<float> zbuffer = std::vector<float>(HEIGHT*WIDTH);
+	uint32_t triangleCount;
 
-	main_window = SDL_CreateWindow("Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
-	if (main_window == NULL) {
+	mainWindow = SDL_CreateWindow("Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
+	if (mainWindow == NULL)
+	{
 		std::cerr << "SDL2 Main window creation failed.";
-		return E_FAIL;
+		return -1;
 	}
-	renderer = SDL_CreateRenderer(main_window, -1, 0);
-	frame_buffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
-	texture = SDL_CreateTextureFromSurface(renderer, frame_buffer);
+
+	renderer = SDL_CreateRenderer(mainWindow, -1, 0);
+	frameBuffer = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, (Uint32)0xff000000, (Uint32)0x00ff0000, (Uint32)0x0000ff00, (Uint32)0x000000ff);
+	texture = SDL_CreateTextureFromSurface(renderer, frameBuffer);
 
 	Camera camera = Camera(glm::vec3(0.f, 1.f, 2.8f), 0.f,90.f, 30.f, (float)WIDTH / (float)HEIGHT);
 	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(64), U2F(134), U2F(244)));
 	CreatePointLight(glm::vec3(0.f, 0.5f, 1.f), 400.f, glm::f32vec3(U2F(244), U2F(174), U2F(66)));
-	CreateGlobalLight(glm::vec3(0.f, 0.f, -1.f), global_light_intensity, glm::f32vec3(U2F(255), U2F(255), U2F(255)));
+	CreateGlobalLight(glm::vec3(0.f, 0.f, -1.f), GLOBAL_LIGHT_INTENSITY, glm::f32vec3(U2F(255), U2F(255), U2F(255)));
 
-	char current_dir[FILENAME_MAX];
-	GetCurrentDir(current_dir, FILENAME_MAX);
+	char currentDir[FILENAME_MAX];
+	GetCurrentDir(currentDir, FILENAME_MAX);
+	std::string modelPath = std::string(currentDir).append("/").append(MODEL);
 
-	//std::string model_path = std::string(current_dir).append("/example/sponza/sponza.obj");
-	std::string model_path = std::string(current_dir).append("/example/CornellBox/CornellBox-Original.obj");
-	//std::string model_path = std::string(current_dir).append("/example/bunny/bunny.obj");
-	//std::string model_path = std::string(current_dir).append("/example/f16/f16.obj");
-	//std::string model_path = std::string(current_dir).append("/example/suzanne/suzanne.obj");
-	//std::string model_path = std::string(current_dir).append("/example/cruiser/cruiser.obj");
-	//std::string model_path = std::string(current_dir).append("/example/armadillo/armadillo.ply");
+	LoadScene(modelPath, g_MeshList);
 
-	LoadScene(model_path, mesh_list);
+	UpdateSkyColor();
 
-	uint32_t triangle_count = 0;
-	updateSkyColor();
-	//glm::u8vec3 sky_color = glm::u8vec3(150, 150, 200);
 	///Main loop
-	while (!quit)
+	while (!g_Quit)
 	{
 
 #ifdef PROFILE
 		auto start = std::chrono::high_resolution_clock::now();
 #endif
-		resetZBuffer(OUT zbuffer, CAM_FAR_PLANE);
-		clearFrameBuffer(frame_buffer);
-		while (SDL_PollEvent(&event)) {
+		ResetZBuffer(zbuffer, CAM_FAR_PLANE);
+		ClearFrameBuffer(frameBuffer);
+		while (SDL_PollEvent(&event))
+		{
 			MovePolling(event, camera);
 		}
 
-		for (auto mesh_itr = mesh_list.begin(); mesh_itr != mesh_list.end(); ++mesh_itr) {
-			Mesh* mesh = (*mesh_itr);
-			triangle_count = mesh->GetTriangleCount();
-			for (uint32_t i = 0; i < triangle_count; ++i) {
+		for (auto meshItr = g_MeshList.begin(); meshItr != g_MeshList.end(); ++meshItr)
+		{
+			Mesh* mesh = (*meshItr);
+			triangleCount = mesh->GetTriangleCount();
+			for (uint32_t i = 0; i < triangleCount; ++i)
+			{
 				Vertex v0 = mesh->GetTrianglePoint(i, 0);
 				Vertex v1 = mesh->GetTrianglePoint(i, 1);
 				Vertex v2 = mesh->GetTrianglePoint(i, 2);
 
 				//move vertices to camera space
-				float w = 1.f;
-				v0.position = (camera.GetViewMatrix()) * glm::vec4(v0.position, w);
-				v1.position = (camera.GetViewMatrix()) * glm::vec4(v1.position, w);
-				v2.position = (camera.GetViewMatrix()) * glm::vec4(v2.position, w);
-
-				/*for (auto light = light_list.begin(); light != light_list.end(); ++light) {
-					if ((*light)->getType() == Light::point) {
-						((PointLight*)(*light))->position = camera.view_matrix * (glm::vec4(((PointLight*)(*light))->position, w));
-					}
-				}*/
+				v0.position = (camera.GetViewMatrix()) * glm::vec4(v0.position, 1.f);
+				v1.position = (camera.GetViewMatrix()) * glm::vec4(v1.position, 1.f);
+				v2.position = (camera.GetViewMatrix()) * glm::vec4(v2.position, 1.f);
 
 				glm::vec3 v0cam = v0.position;
 				glm::vec3 v1cam = v1.position;
 				glm::vec3 v2cam = v2.position;
 
 				//move vertices to screen space
-				perspectiveDivide(OUT v0.position, OUT v1.position, OUT v2.position);
+				PerspectiveDivide(v0.position, v1.position, v2.position);
 
-				//convertToNDC(OUT v0, OUT v1, OUT v2, camera);
-				convertToRasterSpace(OUT v0.position, OUT v1.position, OUT v2.position, camera);
-				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost)slo priradit vrcholy pixelum
+				ConvertToRasterSpace(v0.position, v1.position, v2.position, camera);
+				///v0-v2 je je treba prepocitat perspektivou a prevest na integer (horni 4 bity lze pouzit .x a.y na subpixel presnost) slo priradit vrcholy pixelum
 
-				///very naive and not robust
-				if (frustumCulling(v0.position, v1.position, v2.position, camera)) continue;
+				/// very naive and not robust
+				if (FrustumCulling(v0.position, v1.position, v2.position, camera))
+				{
+					continue;
+				}
 
 #ifdef BACKFACE_CULLING
-				if (backfaceCulling(v0cam, v1cam, v2cam)) {
+				if (BackfaceCulling(v0cam, v1cam, v2cam))
+				{
 					continue;
 				}
 #endif
 
 #ifdef BOUNDING_BOX
-				glm::uvec2 bounding_box[2];
-				ComputeTriangleBoundingBox(bounding_box, v0.position, v1.position, v2.position);
+				glm::uvec2 boundingBox[2];
+				ComputeTriangleBoundingBox(boundingBox, v0.position, v1.position, v2.position);
 #endif			
-				///predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
-				//2*triangle area - to normalize barycentric later
-				float parallelogram_area = EdgeFunction(v0.position, v1.position, glm::vec2(v2.position.x, v2.position.y));
-				/*
-				static const int sub_step = 256;
-				static const int sub_mask = sub_step - 1;
+				// predpocet konstant pro edgestep funkci - optimalizace opakovaneho volani edgefunkce 
+				// 2*triangle area - to normalize barycentric later
+				float parallelogramArea = EdgeFunction(v0.position, v1.position, glm::vec2(v2.position.x, v2.position.y));
 
-				bounding_box[0].x = (bounding_box[0].x + sub_mask) & ~sub_mask;
-				bounding_box[0].y = (bounding_box[0].y + sub_mask) & ~sub_mask;*/
-
-				///Barycentric optimization - precompute these so we can just add steps within the pixel loop instead of cumputing these many times
-				//precompute barycentric coords for bounding box corner - unnormalized by 2*triangle_area
+				// barycentric optimization - precompute these so we can just add steps within the pixel loop instead of cumputing these many times
+				// precompute barycentric coords for bounding box corner - unnormalized by 2*triangle_area
 #ifdef BOUNDING_BOX
-				glm::vec2 pixel = glm::vec2(bounding_box[0].x + 0.5f, bounding_box[0].y + 0.5f);
+				glm::vec2 pixel = glm::vec2(boundingBox[0].x + 0.5f, boundingBox[0].y + 0.5f);
 #else
 				glm::vec2 pixel = glm::vec2(0 + 0.5f, 0 + 0.5f);
 #endif
-				std::vector<float> tuv_row;
-				tuv_row.push_back(EdgeFunction(v1.position, v2.position, pixel));
-				tuv_row.push_back(EdgeFunction(v2.position, v0.position, pixel));
-				tuv_row.push_back(EdgeFunction(v0.position, v1.position, pixel));
-				//precompute edge deltas for y and x (zmena x a y mezi vrcholy)
-				std::vector<float> edges_y; std::vector<float> edges_x;
-				edges_y.push_back(v2.position.y - v1.position.y);
-				edges_y.push_back(v0.position.y - v2.position.y);
-				edges_y.push_back(v1.position.y - v0.position.y);
+				std::vector<float> tuvRow;
+				std::vector<float> edgesY;
+				std::vector<float> edgesX;
 
-				edges_x.push_back(v1.position.x - v2.position.x);
-				edges_x.push_back(v2.position.x - v0.position.x);
-				edges_x.push_back(v0.position.x - v1.position.x);
+				tuvRow.push_back(EdgeFunction(v1.position, v2.position, pixel));
+				tuvRow.push_back(EdgeFunction(v2.position, v0.position, pixel));
+				tuvRow.push_back(EdgeFunction(v0.position, v1.position, pixel));
+
+				//precompute edge deltas for y and x (zmena x a y mezi vrcholy)
+				edgesY.push_back(v2.position.y - v1.position.y);
+				edgesY.push_back(v0.position.y - v2.position.y);
+				edgesY.push_back(v1.position.y - v0.position.y);
+
+				edgesX.push_back(v1.position.x - v2.position.x);
+				edgesX.push_back(v2.position.x - v0.position.x);
+				edgesX.push_back(v0.position.x - v1.position.x);
 
 				//barycentric coords (not normalized, for pixel overlap test)
 				std::vector<float> tuv(3);
 				//2. and 3. barycentric coord (normalized, for interpolation of vertex attributes)
 				glm::vec2 uv;
 				//pixel color sent to buffer
-				glm::f32vec3 pixel_color;
-				///PIXEL LOOP y, main scan-line loop
+				glm::f32vec3 pixelColor;
 				float z;
+
+				///PIXEL LOOP y, main scan-line loop
 #ifdef BOUNDING_BOX
-				for (uint32_t y = bounding_box[0].y+0.5f; y <= bounding_box[1].y+0.5f; ++y) {
+				for (uint32_t y = boundingBox[0].y+0.5f; y <= boundingBox[1].y+0.5f; ++y) {
 #else
 				for (uint32_t y = 0; y <= HEIGHT; ++y) {
 #endif
 					//unnormalized barycentric
-					tuv[0] = tuv_row[0];
-					tuv[1] = tuv_row[1];
-					tuv[2] = tuv_row[2];
+					tuv[0] = tuvRow[0];
+					tuv[1] = tuvRow[1];
+					tuv[2] = tuvRow[2];
 					///PIXEL LOOP x
 #ifdef BOUNDING_BOX
-					for (uint32_t x = bounding_box[0].x+0.5f; x <= bounding_box[1].x+0.5f; ++x) {
+					for (uint32_t x = boundingBox[0].x+0.5f; x <= boundingBox[1].x+0.5f; ++x)
+					{
 #else
-					for (uint32_t x = 0; x <= WIDTH; ++x) {
+					for (uint32_t x = 0; x <= WIDTH; ++x)
+					{
 #endif
 						//sample center of the pixel...for antialiasing loop "pixel loop x" over more samples
 						//pixel = glm::vec2(x + 0.5, y + 0.5);
 						if (IsPixelInTriangle(tuv, v0.position, v1.position, v2.position))
 						{
-							uv.x = tuv[1] / parallelogram_area;
-							uv.y = tuv[2] / parallelogram_area;
+							uv.x = tuv[1] / parallelogramArea;
+							uv.y = tuv[2] / parallelogramArea;
 							//pixel depth in camera space
 							z = 1 / ((1 - uv.x - uv.y) / v0.position.z + uv.x / v1.position.z + uv.y / v2.position.z);
 
-							if (z < (zbuffer[x + WIDTH * y])) {
+							if (z < (zbuffer[x + WIDTH * y]))
+							{
 								zbuffer[x + WIDTH * y] = z;
-								//pixel_color = 0.9f*mesh->GetMaterial().diffuse_color + AMBIENT_LIGHT * mesh->GetMaterial().ambient_color;
 
 								glm::vec3 N;
 								glm::f32vec3 d = glm::f32vec3(0);
 								glm::f32vec3 s = glm::f32vec3(0);
 
-								if (!mesh->GetTextures().empty()) {
+								if (!mesh->GetTextures().empty())
+								{
 									// Calculate shading and texturing
 									// calcFragmentProperties
-									glm::vec2 tex_coords;
+									glm::vec2 texCoords;
 									Texture texture;
-									for (auto tex_itr = mesh->GetTextures().begin(); tex_itr != mesh->GetTextures().end(); ++tex_itr) {
-										if ((*tex_itr).type == "texture_diffuse") {
-											texture = (*tex_itr);
+									for (auto texItr = mesh->GetTextures().begin(); texItr != mesh->GetTextures().end(); ++texItr)
+									{
+										// TODO - should be strcpy
+										if ((*texItr).type == "texture_diffuse")
+										{
+											texture = (*texItr);
 										}
 									}
-									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, texture.height, texture.width, OUT N, OUT tex_coords);
+
+									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, texture.height, texture.width, N, texCoords);
 
 									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam / -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
-									/*float fragment_x = z * ((v0.position.x / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.x / -v1.position.z) * uv.x + (v2.position.x / -v2.position.z) * uv.y);
-									float fragment_y = z * ((v0.position.y / -v0.position.z) * (1-uv.x-uv.y) + (v1.position.y / -v1.position.z) * uv.x + (v2.position.y / -v2.position.z) * uv.y);*/
 
-									glm::vec3 fragment_camera_space_position = glm::vec3(fragment, -z);
-									glm::vec3 view_direction = glm::normalize(-fragment_camera_space_position);
-
-									float angle_of_incidence = std::max(0.f, glm::dot(N, view_direction));
+									float angleOfIncidence = std::max(0.f, glm::dot(N, glm::normalize(-glm::vec3(fragment, -z))));
 
 									//clamp texture coords..cant just subtract 1 because coords can be less than 1 and the result would be negative
-									uint32_t texel_index = 3 * (glm::clamp((int)tex_coords.x, 0, texture.width - 1) + (texture.width)*glm::clamp((int)tex_coords.y, 0, texture.height - 1));
-									//if (texel_index <= 3*((texture.width)*(texture.height))) {
-									glm::u8vec3 rgb = glm::u8vec3(texture.data[0 + texel_index],
-										texture.data[1 + texel_index],
-										texture.data[2 + texel_index]
+									uint32_t texelIndex = 3 * (glm::clamp((int)texCoords.x, 0, texture.width - 1) + (texture.width)*glm::clamp((int)texCoords.y, 0, texture.height - 1));
+									glm::u8vec3 rgb = glm::u8vec3(texture.data[0 + texelIndex],
+										texture.data[1 + texelIndex],
+										texture.data[2 + texelIndex]
 									);
 									//  Let the final color be C = I_view*M + I_ambient*M, where 
 									//	Lview is view (cosine) angle attenuation intensity and 
 									//	Lambient is ambient light intensity
 									//	M is material color
-									pixel_color = glm::clamp(angle_of_incidence*(U8vec2F32vec(rgb)) + AMBIENT_LIGHT * (U8vec2F32vec(rgb)), 0.f, 1.f);
-									setRGBAPixel(x, y, (unsigned char*)frame_buffer->pixels, F32vec2U8vec(pixel_color));
-									/*}
-									else {
-										setRGBAPixel(x, y, frame_buffer, glm::u8vec3(180,120,180));
-									}*/
+									pixelColor = glm::clamp(angleOfIncidence*(U8vec2F32vec(rgb)) + AMBIENT_LIGHT * (U8vec2F32vec(rgb)), 0.f, 1.f);
+									SetRGBAPixel(x, y, (unsigned char*)frameBuffer->pixels, F32vec2U8vec(pixelColor));
 								}
-								else {
-									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, OUT N);
+								else
+								{
+									CalcFragmentProperties(v0, v1, v2, v0cam, v1cam, v2cam, uv, z, N);
 									//interpolate point in camera space
 									glm::f32vec2 fragment = z * ((v0cam / -v0.position.z) * (1 - uv.x - uv.y) + (v1cam / -v1.position.z) * uv.x + (v2cam / -v2.position.z) * uv.y);
 
-									glm::vec3 fragment_camera_space_position = glm::vec3(fragment, -z);
-									//glm::vec3 fragment_camera_space_position = glm::vec3(fragment_x, fragment_y, -z);
-									glm::vec3 view_direction = glm::normalize(-fragment_camera_space_position);
-
-									float angle_of_incidence = std::max(0.f, glm::dot(N, view_direction));
+									glm::vec3 fragmentCameraSpacePosition = glm::vec3(fragment, -z);
+									glm::vec3 viewDirection = glm::normalize(-fragmentCameraSpacePosition);
+									float angleOfIncidence = std::max(0.f, glm::dot(N, viewDirection));
 
 									///PHONG
-									for (auto light = light_list.begin(); light != light_list.end(); ++light) {
-										//hit_color = glm::f32vec3(0);
-										//is_lit = true;
-										OUT glm::vec3 light_intensity; OUT glm::vec3 light_direction; OUT float light_distance;
-										(*light)->Shine(light_intensity, light_distance, light_direction, fragment_camera_space_position);
+									for (auto light = g_LightList.begin(); light != g_LightList.end(); ++light)
+									{
+										glm::vec3 lightIntensity;
+										glm::vec3 lightDirection;
+									       	float lightDistance;
 
-										//glm::vec3 ref_dir = angle_of_incidence;
-										glm::vec3 ref_dir = light_direction;
-										CalcReflectedDirection(N, ref_dir);
+										(*light)->Shine(lightIntensity, lightDistance, lightDirection, fragmentCameraSpacePosition);
 
-										d += mesh->GetAlbedo() * light_intensity * glm::f32vec3(std::max(0.f, glm::dot(N, -light_direction)));
+										glm::vec3 refDir = lightDirection;
+										CalcReflectedDirection(N, refDir);
 
-										s += light_intensity * std::pow(std::max(0.f, glm::dot(ref_dir, view_direction)), mesh->GetMaterial().shininess);
+										d += mesh->GetAlbedo() * lightIntensity * glm::f32vec3(std::max(0.f, glm::dot(N, -lightDirection)));
 
+										s += lightIntensity * std::pow(std::max(0.f, glm::dot(refDir, viewDirection)), mesh->GetMaterial().shininess);
 									}
-									pixel_color = glm::clamp((1.0f*mesh->GetMaterial().emissive_color + d * mesh->GetMaterial().diffuse_color + s * mesh->GetMaterial().specluar_color + mesh->GetMaterial().ambient_color*AMBIENT_LIGHT), 0.f, 1.f);
-									//pixel_color = glm::clamp(angle_of_incidence*mesh->material.diffuse_color + AMBIENT_LIGHT * mesh->material.ambient_color, 0.f, 1.f);
 
-									setRGBAPixel(x, y, (unsigned char*)frame_buffer->pixels, F32vec2U8vec(pixel_color));
+									pixelColor = glm::clamp((1.0f*mesh->GetMaterial().emissiveColor + d * mesh->GetMaterial().diffuseColor + s * mesh->GetMaterial().specluarColor + mesh->GetMaterial().ambientColor*AMBIENT_LIGHT), 0.f, 1.f);
+									SetRGBAPixel(x, y, (unsigned char*)frameBuffer->pixels, F32vec2U8vec(pixelColor));
 								}
 							}
 						}
+
 						//x step
-						tuv[0] += edges_y[0];
-						tuv[1] += edges_y[1];
-						tuv[2] += edges_y[2];
+						tuv[0] += edgesY[0];
+						tuv[1] += edgesY[1];
+						tuv[2] += edgesY[2];
 					}//end PIXEL row loop
+
 					//y step
-					tuv_row[0] += edges_x[0];
-					tuv_row[1] += edges_x[1];
-					tuv_row[2] += edges_x[2];
+					tuvRow[0] += edgesX[0];
+					tuvRow[1] += edgesX[1];
+					tuvRow[2] += edgesX[2];
 				}//end line loop
+
 			}//end triangle loop for a given mesh
+
 		}//end mesh loop
 
-			///Draw
-			//SDL_LockSurface(frame_buffer);
-		SDL_UpdateTexture(texture, NULL, frame_buffer->pixels, WIDTH * sizeof(Uint32));//
-		//SDL_UnlockSurface(frame_buffer);
+		//Draw
+		SDL_UpdateTexture(texture, NULL, frameBuffer->pixels, WIDTH * sizeof(Uint32));
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
@@ -536,5 +503,5 @@ int main(int argc, char* argv[]) {
 
 	}
 
-	return E_OK;
+	return 0;
 }

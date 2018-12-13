@@ -1,7 +1,9 @@
 #pragma once
 
-///For getting working directory path
 #include <stdio.h>
+#include <string>
+
+///For getting working directory path
 #ifdef _WIN32
 #include <direct.h>
 #define GetCurrentDir _getcwd
@@ -20,7 +22,6 @@
 #define HEIGHT 480
 
 #define PROFILE
-#define OUT
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264f
@@ -40,3 +41,11 @@ const float inf = std::numeric_limits<float>::max();
 #define SMOOTH_SHADING
 //repeat textures if coordinates extrapolate out of the texture size
 #define TEXTURE_REPEAT
+
+//const std::string MODEL = "/example/sponza/sponza.obj";
+//const std::string MODEL = "/example/CornellBox/CornellBox-Original.obj";
+const std::string MODEL = "/example/bunny/bunny.obj";
+//const std::string MODEL = "/example/f16/f16.obj";
+//const std::string MODEL = "/example/suzanne/suzanne.obj";
+//const std::string MODEL = "/example/cruiser/cruiser.obj";
+//const std::string MODEL = "/example/armadillo/armadillo.ply";

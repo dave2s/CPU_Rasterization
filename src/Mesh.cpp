@@ -41,8 +41,8 @@ void CalcFragmentProperties(Vertex& v0, Vertex& v1, Vertex& v2, glm::vec3 v0cam,
 #endif
 	///Textures
 	//interpolation with perspective correction (divide by respective vertex depth in camera space, then multiply by fragment depth)
-	textureCoords.x = fragmentDepth*((1 - uv.x - uv.y)*v0.tex_coords.x/v0.position.z + uv.x*v1.tex_coords.x/v1.position.z + uv.y*v2.tex_coords.x/v2.position.z);
-	textureCoords.y = fragmentDepth*((1 - uv.x - uv.y)*v0.tex_coords.y/v0.position.z + uv.x*v1.tex_coords.y/v1.position.z + uv.y*v2.tex_coords.y/v2.position.z);
+	textureCoords.x = fragmentDepth*((1 - uv.x - uv.y)*v0.texCoords.x/v0.position.z + uv.x*v1.texCoords.x/v1.position.z + uv.y*v2.texCoords.x/v2.position.z);
+	textureCoords.y = fragmentDepth*((1 - uv.x - uv.y)*v0.texCoords.y/v0.position.z + uv.x*v1.texCoords.y/v1.position.z + uv.y*v2.texCoords.y/v2.position.z);
 #ifdef TEXTURE_REPEAT
 	//lets repeat the texture :) /// if 1, rets 0, is ok?
 	if (textureCoords.x < 0)

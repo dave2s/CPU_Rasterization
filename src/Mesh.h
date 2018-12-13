@@ -8,15 +8,15 @@ struct Vertex
 {
 	glm::f32vec3 position;
 	glm::f32vec3 normal;
-	glm::f32vec2 tex_coords;
+	glm::f32vec2 texCoords;
 };
 
 struct Material
 {
-	glm::f32vec3 diffuse_color;
-	glm::f32vec3 specluar_color;
-	glm::f32vec3 ambient_color;
-	glm::f32vec3 emissive_color;
+	glm::f32vec3 diffuseColor;
+	glm::f32vec3 specluarColor;
+	glm::f32vec3 ambientColor;
+	glm::f32vec3 emissiveColor;
 	float shininess;
 };
 

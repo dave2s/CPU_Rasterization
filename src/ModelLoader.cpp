@@ -14,7 +14,6 @@ std::vector<Texture> LoadTextures(aiMaterial *mtl, aiTextureType type, std::stri
 	for (uint32_t i = 0; i < mtl->GetTextureCount(type); ++i)
 	{
 		aiString path;
-		bool tex_loaded;
 		Texture tex;
 		int width, height, channels;
 
@@ -60,11 +59,11 @@ Mesh* ProcessTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir)
 
 		if (mesh->mTextureCoords[0])
 		{
-			v.tex_coords = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
+			v.texCoords = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
 		}
 		else
 		{
-			v.tex_coords = glm::vec2(0.f, 0.f);
+			v.texCoords = glm::vec2(0.f, 0.f);
 		}
 		vertices.push_back(v);
 	}
@@ -91,16 +90,16 @@ Mesh* ProcessTreeMesh(const aiScene* scene, aiMesh* mesh, std::string& dir)
 		aiGetMaterialColor(mtl, AI_MATKEY_COLOR_EMISSIVE, &emissive);
 		aiGetMaterialFloat(mtl, AI_MATKEY_SHININESS, &shininess);
 
-		myMaterial.ambient_color = (glm::f32vec4(ambient.r, ambient.g, ambient.b, ambient.a) == glm::f32vec4(0)) ? glm::f32vec3(AMBIENT_LIGHT) : glm::f32vec4(ambient.r, ambient.g, ambient.b, ambient.a);
-		myMaterial.diffuse_color = glm::f32vec4(diffuse.r, diffuse.g, diffuse.b, diffuse.a);
-		myMaterial.specluar_color = glm::f32vec4(specular.r, specular.g, specular.b, specular.a);
-		myMaterial.emissive_color = glm::f32vec4(emissive.r, emissive.g, emissive.b, emissive.a);
+		myMaterial.ambientColor = (glm::f32vec4(ambient.r, ambient.g, ambient.b, ambient.a) == glm::f32vec4(0)) ? glm::f32vec3(AMBIENT_LIGHT) : glm::f32vec4(ambient.r, ambient.g, ambient.b, ambient.a);
+		myMaterial.diffuseColor = glm::f32vec4(diffuse.r, diffuse.g, diffuse.b, diffuse.a);
+		myMaterial.specluarColor = glm::f32vec4(specular.r, specular.g, specular.b, specular.a);
+		myMaterial.emissiveColor = glm::f32vec4(emissive.r, emissive.g, emissive.b, emissive.a);
 		myMaterial.shininess = shininess;
 
-		std::vector<Texture> diff_Map = LoadTextures(mtl, aiTextureType_DIFFUSE, "texture_diffuse",dir);
-		textures.insert(textures.end(), diff_Map.begin(), diff_Map.end());
-		std::vector<Texture> spec_map = LoadTextures(mtl, aiTextureType_SPECULAR, "texture_specular",dir);
-		textures.insert(textures.end(), spec_map.begin(), spec_map.end());
+		std::vector<Texture> diffMap = LoadTextures(mtl, aiTextureType_DIFFUSE, "texture_diffuse",dir);
+		textures.insert(textures.end(), diffMap.begin(), diffMap.end());
+		std::vector<Texture> specMap = LoadTextures(mtl, aiTextureType_SPECULAR, "texture_specular",dir);
+		textures.insert(textures.end(), specMap.begin(), specMap.end());
 	}
 
 	return new Mesh(vertices, indices, false, myMaterial, 0.18f, textures);
