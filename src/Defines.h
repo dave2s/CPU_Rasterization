@@ -44,8 +44,8 @@ const float inf = std::numeric_limits<float>::max();
 
 //const std::string MODEL = "/example/sponza/sponza.obj";
 //const std::string MODEL = "/example/CornellBox/CornellBox-Original.obj";
-const std::string MODEL = "/example/bunny/bunny.obj";
+//const std::string MODEL = "/example/bunny/bunny.obj";
 //const std::string MODEL = "/example/f16/f16.obj";
-//const std::string MODEL = "/example/suzanne/suzanne.obj";
+const std::string MODEL = "/example/suzanne/suzanne.obj";
 //const std::string MODEL = "/example/cruiser/cruiser.obj";
 //const std::string MODEL = "/example/armadillo/armadillo.ply";
